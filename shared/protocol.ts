@@ -18,7 +18,7 @@ export interface ClientMessages {
   /** Kuleyi aynı yuvada başka bir kuleyle değiştirir (yeni kademe ya da başka derece). */
   turret_upgrade: { slot: number; grade: number };
   slot_buy: Record<string, never>;
-  /** Sahip olunan noktaya karakol kurar ya da eski kademe karakolu yükseltir. */
+  /** Sahip olunan noktaya (silahsız) karakol kurar; kuruluysa kademesini yükseltir, sonra üstüne kule ekler. */
   outpost_build: { index: number };
   rematch: Record<string, never>;
 }
@@ -98,6 +98,7 @@ export interface IOutpost {
   capSide: number;
   cap: number;
   built: boolean;
+  armed: boolean;
   tier: number;
   hp: number;
   maxHp: number;

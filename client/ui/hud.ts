@@ -104,7 +104,7 @@ export class Hud {
     // ileri karakol noktaları (ekranda soldan sağa: benim kalemden rakibe)
     const opsRow = h('div', {
       class: 'ops',
-      title: 'Noktayı ele geçirmek için birimlerin orada tek başına 3 sn kalmalı. Her nokta +%25 gelir. Karakol kurarsan birimlerin oradan doğar ve düşman yıkmadan geçemez (K).',
+      title: 'Noktayı ele geçirmek için birimlerin orada tek başına 3 sn kalmalı. Her nokta +%25 gelir. Karakol kurarsan birimlerin oradan doğar ve düşman yıkmadan geçemez. Karakol silahsız kurulur; üstüne ayrıca kule ekleyebilirsin (K).',
     });
     for (let s = 0; s < B.OUTPOST_XS.length; s++) {
       const label = h('span', { class: 'oplabel' });
@@ -317,7 +317,14 @@ export class Hud {
       const i = this.opIndex(s);
       const o = st.st.outposts?.at(i);
       if (!o || o.owner !== this.side) continue;
-      const cost = !o.built ? B.TIERS[me.tier].outpost.cost : o.tier < me.tier ? B.outpostUpgradeCost(o.tier, me.tier) : -1;
+      // sıradaki adım: kur → kademe yükselt → üstüne kule ekle
+      const cost = !o.built
+        ? B.TIERS[me.tier].outpost.cost
+        : o.tier < me.tier
+          ? B.outpostUpgradeCost(o.tier, me.tier)
+          : !o.armed
+            ? B.TIERS[o.tier].outpost.armCost
+            : -1;
       if (cost >= 0 && me.gold >= cost) return this.send('outpost_build', { index: i });
     }
     sfx.deny();
@@ -521,6 +528,11 @@ export class Hud {
         } else if (o.tier < me.tier) {
           const c = B.outpostUpgradeCost(o.tier, me.tier);
           text = `Yükselt ${fmtNum(c)}`;
+          enabled = playing && gold >= c;
+        } else if (!o.armed) {
+          // karakol silahsız kurulur; üstüne kule ayrıca eklenir
+          const c = B.TIERS[o.tier].outpost.armCost;
+          text = `Kule ekle ${fmtNum(c)}`;
           enabled = playing && gold >= c;
         } else {
           text = `▲ %${Math.round((o.hp / o.maxHp) * 100)}`;

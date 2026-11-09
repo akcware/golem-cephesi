@@ -105,7 +105,7 @@ export class Menu {
             h('li', { html: 'Düşman öldürmek altın ve XP verir. XP dolunca dökümhaneyi yükselt (<kbd>E</kbd>): Ahşap → Bronz → Demir → Kristal → Eter.' }),
             h('li', { html: '<b>Savun / Hücum</b> (<kbd>S</kbd>): Savunda ordu kale önünde toplanır; yeterince büyüyünce hücuma geç. Tek tek giden golemler eriyip gider, toplu dalga kazanır.' }),
             h('li', { html: '<b>Yetenekler:</b> Her çağın birimleri farklıdır: kök salan ahşap muhafız, kalkanlı bronz, zırhlı demir şövalye, hasar yansıtan kristal, dirilen eter bekçisi… (butonların üstüne gel).' }),
-            h('li', { html: '<b>Karakollar:</b> Koridordaki 3 noktayı birimlerinle tutarak ele geçir (+%25 gelir). Karakol kurarsan (<kbd>K</kbd>) birimlerin oradan doğar ve düşman yıkmadan geçemez.' }),
+            h('li', { html: '<b>Karakollar:</b> Koridordaki 3 noktayı birimlerinle tutarak ele geçir (+%25 gelir). Karakol kurarsan (<kbd>K</kbd>) birimlerin oradan doğar ve düşman yıkmadan geçemez. Karakol silahsız kurulur; üstüne kule ekleyebilirsin.' }),
             h('li', { html: '<b>Kuleler:</b> Her çağda Hafif / Orta / Ağır üç kule var ve her biri farklı saldırır: ok, bomba, delici balista, ateş, buz, lazer, zincir şimşek. Yuvaya tıklayıp seç (<kbd>T</kbd>: parana yeten en iyisini kurar).' }),
             h('li', { html: 'Ağır golemler kaleye ekstra hasar verir. Özel güç (<kbd>Q</kbd>) düşmanın ön saflarını vurur.' }),
             h('li', { html: 'Haritayı sürükle, fare tekerleği ya da <kbd>A</kbd>/<kbd>D</kbd> ile kaydır.' }),

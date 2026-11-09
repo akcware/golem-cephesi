@@ -71,6 +71,7 @@ export class Outpost extends Schema {
   @type('int8') capSide = -1; // ele geçirme çubuğu kimin lehine dolu
   @type('float32') cap = 0; // 0..1
   @type('boolean') built = false;
+  @type('boolean') armed = false; // üstünde kule (silah) var mı
   @type('uint8') tier = 0;
   @type('float32') hp = 0;
   @type('float32') maxHp = 0;

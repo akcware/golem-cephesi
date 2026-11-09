@@ -22,7 +22,7 @@ npm run dev
 |---|---|
 | `1` `2` `3` | Yakın dövüş / menzilli / ağır golem üret |
 | `S` | Savun / Hücum: ordu kale önünde (ya da en öndeki karakolda) toplanır ya da topluca saldırır |
-| `K` | En öndeki noktana karakol kur / eski karakolu yükselt |
+| `K` | En öndeki noktanda sıradaki adım: karakol kur → kademesini yükselt → üstüne kule ekle |
 | `E` | Dökümhaneyi bir sonraki kademeye yükselt (XP dolunca) |
 | `Q` | Özel güç: düşmanın ön saflarını vurur |
 | `T` | Parana yeten en iyi kuleyi kur / eski kuleyi yükselt / yeni yuva aç (yuvaya tıklayınca seçim menüsü açılır) |
@@ -31,7 +31,7 @@ npm run dev
 - **Güç üçgeni:** Yakın dövüş › Menzilli › Ağır › Yakın dövüş (1.5× hasar).
 - **Göğüs göğüse çatışma:** Ön safta her taraftan en fazla 3 yakın dövüşçü aynı anda savaşır, menzilliler arkadan ateş eder. Kalabalık, toplu ordu tek tek gelenleri ezer.
 - **Kuşatma:** Ağır golemler kaleye 1.5×, menzilliler 0.6× hasar verir.
-- **İleri karakollar:** Koridorda 3 nokta var (her tarafın yakın noktası + ortadaki çekişmeli nokta). Bir noktada 3 sn sadece senin birimlerin durursa nokta senin olur: her nokta +%25 pasif gelir. Noktaya karakol kurarsan: yeni birimlerin oradan doğar, "Savun" orada toplanır, kendi Hafif kulesiyle ateş eder ve düşman onu yıkmadan geçemez. Yıkan taraf karakol maliyetinin yarısını kazanır.
+- **İleri karakollar:** Koridorda 3 nokta var (her tarafın yakın noktası + ortadaki çekişmeli nokta). Bir noktada 3 sn sadece senin birimlerin durursa nokta senin olur: her nokta +%25 pasif gelir. Noktaya karakol kurarsan: yeni birimlerin oradan doğar, "Savun" orada toplanır ve düşman onu yıkmadan geçemez. Karakol silahsız kurulur; ayrıca para vererek üstüne kademenin Hafif kulesini ekleyebilirsin. Yıkan taraf karakol maliyetinin yarısını kazanır.
 - **Birim yetenekleri (otomatik):**
 
 | Çağ | Yakın dövüş | Menzilli | Ağır |
@@ -73,6 +73,8 @@ client/textures.ts  Tüm grafikler kodla çiziliyor (görsel dosyası yok)
 client/scenes/      Phaser sahnesi: çizim, animasyon, efektler
 client/ui/          Menü ve oyun içi arayüz (HTML)
 tools/balance-sim.ts Bot'a karşı bot maçlarıyla denge raporu
+tools/rusher.ts     Botu sınamak için oyuncu taklitleri (saldırgan, planlı, kaplumbağa, usta)
+tools/old-bot.ts    Botun güçlendirilmeden önceki sürümü (karşılaştırma için)
 ```
 
 ## Denge testi
@@ -83,6 +85,16 @@ npm run balance
 
 ```bash
 npx tsx tools/balance-sim.ts 40 normal hard
+```
+
+Botun gücü (oyuncu taklitlerine ve eski bota karşı):
+
+```bash
+npx tsx tools/bot-vs-rusher.ts 20 normal hard --expert
+```
+
+```bash
+npx tsx tools/new-vs-old.ts 30 normal
 ```
 
 ## Yayına alma

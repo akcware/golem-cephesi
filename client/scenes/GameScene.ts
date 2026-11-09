@@ -341,8 +341,9 @@ export class GameScene extends Phaser.Scene {
       v.banner.setTint(color);
       // mini kale (kuruluysa)
       const built = !!o?.built;
+      const armed = built && !!o?.armed; // karakol silahsız kurulur, kule ayrıca eklenir
       v.fort.setVisible(built);
-      v.turret.setVisible(built);
+      v.turret.setVisible(armed);
       if (built && o) {
         const team: Team = mine ? 'a' : 'e';
         const fk = keys.castle(o.tier, team);
@@ -352,7 +353,7 @@ export class GameScene extends Phaser.Scene {
         const f = mine ? 1 : -1;
         v.fort.setPosition(x, GROUND_Y + 8).setScale((f * FORT_SCALE) / ART_SCALE, FORT_SCALE / ART_SCALE);
         v.turret.setPosition(x, v.turret.y).setScale((f * 0.85) / ART_SCALE, 0.85 / ART_SCALE);
-        if (v.lastShots >= 0 && o.shots !== v.lastShots && o.tgt) {
+        if (armed && v.lastShots >= 0 && o.shots !== v.lastShots && o.tgt) {
           this.turretFire(v.turret, mine, x, o.tier, 0, o.tgt, B.OUTPOST_RANGE);
         }
       }

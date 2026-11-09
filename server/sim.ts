@@ -223,7 +223,10 @@ export class Simulation {
     return true;
   }
 
-  /** Sahip olunan noktaya karakol kurar; kuruluysa ve eski kademedeyse yükseltir. */
+  /**
+   * Sahip olunan noktada sıradaki karakol adımını yapar:
+   * 1) silahsız karakol kur, 2) eski kademedeyse kademesini yükselt, 3) üstüne kule (silah) ekle.
+   */
   outpostBuild(p: Player, index: number): boolean {
     if (!this.playing() || !Number.isInteger(index)) return false;
     const o = this.state.outposts.at(index);
@@ -233,6 +236,7 @@ export class Simulation {
       if (p.goldF < def.cost) return false;
       this.spend(p, def.cost);
       o.built = true;
+      o.armed = false;
       o.tier = p.tier;
       o.maxHp = def.hp;
       o.hp = def.hp;
@@ -240,7 +244,16 @@ export class Simulation {
       this.emit({ t: 'outpost', i: index, k: 'built', side: p.side });
       return true;
     }
-    if (o.tier >= p.tier) return false;
+    if (o.tier >= p.tier) {
+      if (o.armed) return false;
+      const arm = B.TIERS[o.tier].outpost.armCost;
+      if (p.goldF < arm) return false;
+      this.spend(p, arm);
+      o.armed = true;
+      o.cd = 0.5;
+      this.emit({ t: 'outpost', i: index, k: 'built', side: p.side });
+      return true;
+    }
     const cost = B.outpostUpgradeCost(o.tier, p.tier);
     if (p.goldF < cost) return false;
     this.spend(p, cost);
@@ -378,7 +391,7 @@ export class Simulation {
   /** Kurulu karakolların kuleleri: kendi kademesinin Hafif kulesi gibi ateş eder. */
   private tickOutpostTurrets(dt: number) {
     this.state.outposts.forEach((o) => {
-      if (!o.built || o.owner < 0) return;
+      if (!o.built || !o.armed || o.owner < 0) return;
       o.cd = Math.max(0, o.cd - dt);
       if (o.cd > 0) return;
       const side = o.owner;
@@ -409,6 +422,7 @@ export class Simulation {
     const killer = this.player(attackerSide);
     if (killer) this.earn(killer, B.TIERS[o.tier].outpost.cost * B.OUTPOST_BOUNTY);
     o.built = false;
+    o.armed = false;
     o.owner = -1;
     o.capSide = -1;
     o.cap = 0;
@@ -562,14 +576,23 @@ export class Simulation {
     return n;
   }
 
-  /** Doğum noktası boş mu? (kendi birimlerimle üst üste doğmasın) */
-  private spawnClear(side: number, radius: number): boolean {
-    const x = this.spawnPoint(side);
-    let clear = true;
-    this.state.units.forEach((u) => {
-      if (u.side === side && Math.abs(u.x - x) < radius + u.def.radius + B.UNIT_SPACING) clear = false;
-    });
-    return clear;
+  /**
+   * Yeni birimin doğacağı boş yer: önce doğum noktası; orası kendi birimlerimizle doluysa
+   * (ör. Savun'da karakolun önünde dizilen ordu) kale kapısına doğru ilk boş yer. Hiç yoksa null.
+   */
+  private freeSpawnX(side: number, radius: number): number | null {
+    const dir = B.dirOf(side);
+    const start = this.spawnPoint(side);
+    const gate = B.spawnX(side);
+    const clear = (x: number) => {
+      let ok = true;
+      this.state.units.forEach((u) => {
+        if (u.side === side && Math.abs(u.x - x) < radius + u.def.radius + B.UNIT_SPACING) ok = false;
+      });
+      return ok;
+    };
+    for (let x = start; (x - gate) * dir >= 0; x -= dir * 8) if (clear(x)) return x;
+    return clear(gate) ? gate : null;
   }
 
   private tickPlayer(p: Player, dt: number) {
@@ -585,12 +608,9 @@ export class Simulation {
       const [t, arch] = p.queue.at(0)!.split(':');
       const def = B.unitDef(Number(t), arch as Arch);
       if (p.trainProgress < 1) p.trainProgress = Math.min(1, p.trainProgress + dt / def.train);
-      if (
-        p.trainProgress >= 1 &&
-        this.countUnits(p.side) < B.MAX_UNITS_PER_SIDE &&
-        this.spawnClear(p.side, def.radius)
-      ) {
-        this.spawn(p, def);
+      const x = p.trainProgress >= 1 && this.countUnits(p.side) < B.MAX_UNITS_PER_SIDE ? this.freeSpawnX(p.side, def.radius) : null;
+      if (x !== null) {
+        this.spawn(p, def, x);
         p.queue.shift();
         p.trainProgress = 0;
         p.trained += 1;
@@ -599,14 +619,14 @@ export class Simulation {
     if (p.specialCd > 0) p.specialCd = Math.max(0, p.specialCd - dt);
   }
 
-  private spawn(p: Player, def: B.UnitDef) {
+  private spawn(p: Player, def: B.UnitDef, x: number) {
     const u = new Unit();
     u.id = String(this.nextId++);
     u.side = p.side;
     u.tier = def.tier;
     u.arch = def.arch;
     u.def = def;
-    u.x = this.spawnPoint(p.side);
+    u.x = x;
     u.hp = def.hp;
     u.maxHp = def.hp;
     u.cd = def.atkCd * 0.4;

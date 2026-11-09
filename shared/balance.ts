@@ -307,7 +307,8 @@ export interface TierDef {
   /** [Hafif, Orta, Ağır] */
   turrets: TurretDef[];
   /** İleri karakol (bu kademede kurulursa) */
-  outpost: { cost: number; hp: number };
+  /** İleri karakol (bu kademede kurulursa). armCost: üstüne kule (silah) ekleme bedeli */
+  outpost: { cost: number; hp: number; armCost: number };
 }
 
 export interface TurretDef {
@@ -404,7 +405,11 @@ export const TIERS: TierDef[] = TIER_INFO.map((info, t) => {
         burnDur: s.burn?.dur ?? 0,
       };
     }),
-    outpost: { cost: round5(150 * Math.pow(2.0, t)), hp: Math.round(800 * Math.pow(2.0, t)) },
+    outpost: {
+      cost: round5(150 * Math.pow(2.0, t)),
+      hp: Math.round(800 * Math.pow(2.0, t)),
+      armCost: round5(120 * Math.pow(2.0, t)),
+    },
   };
 });
 
