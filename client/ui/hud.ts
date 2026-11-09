@@ -1035,6 +1035,15 @@ export class Hud {
         sfx.click();
       }
     }
+    // kısa pencerelerde kart seçimi eğitim panelinin altında kalır: çakışırsa panel geçici olarak çekilir
+    // (görünmez yapılır ama yerini korur, böylece çakışma ölçümü titremez)
+    let clash = false;
+    if (step && !this.offerEl.classList.contains('hidden')) {
+      const a = this.coach.el.getBoundingClientRect();
+      const b = this.offerEl.getBoundingClientRect();
+      clash = a.bottom > b.top && a.top < b.bottom;
+    }
+    setClass(this.coach.el, 'tut-hide', clash);
 
     // gerçek maçlarda bir kerelik ipuçları
     const now = performance.now();

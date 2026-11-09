@@ -1612,9 +1612,13 @@ kbd {
 .tipbox .ticon {
   font-size: 20px;
 }
-.tut-hl {
+/* Konumu olmayan hedefi öne alır; kendi konumu olan (ör. ekrana sabit kart seçici) yerinde kalır.
+   :where ile özgüllük sıfır, öğenin kendi position/z-index kuralı kazanır. */
+:where(.tut-hl) {
   position: relative;
   z-index: 3;
+}
+.tut-hl {
   outline: 3px solid var(--gold);
   outline-offset: 3px;
   border-radius: 12px;
