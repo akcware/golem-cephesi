@@ -320,6 +320,7 @@ function showIcons(icons: ReturnType<typeof buildIcons>) {
       row.appendChild(cell);
     };
     for (const a of B.ARCHES) add(icons.units[t][a]);
+    add(icons.commanders[t]);
     for (const a of B.ARCHES) add(icons.units[t][a], true);
     for (const s of icons.turrets[t]) add(s);
     add(icons.specials[t]);

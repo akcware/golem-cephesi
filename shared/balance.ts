@@ -93,6 +93,18 @@ export const OUTPOST_INCOME = 0.25;
 /** Karakolu yıkan tarafa, karakolun maliyetinin bu oranı kadar altın. */
 export const OUTPOST_BOUNTY = 0.5;
 
+/**
+ * Yıkım Saati: maç bu kadar uzarsa (sn) birimlerin kaleye ve karakollara verdiği hasar
+ * her dakika SIEGE_RAMP kadar artar. İki tarafın da savunması tam oturunca maç kilitlenmesin diye.
+ */
+export const SIEGE_TIME = 15 * 60;
+export const SIEGE_RAMP = 0.3;
+/** Yıkım Saati'nde kaleler ve karakollar saniyede azami canlarının bu oranını kaybeder (~8 dk'da sıfır). */
+export const SIEGE_DECAY = 0.002;
+export function siegeMult(time: number): number {
+  return time <= SIEGE_TIME ? 1 : 1 + (SIEGE_RAMP * (time - SIEGE_TIME)) / 60;
+}
+
 // Ekonomi
 export const BOUNTY_RATE = 0.75; // öldürülen birimin maliyetinin bu oranı kadar altın
 export const XP_KILL_RATE = 1.0; // öldürünce maliyet × bu oran kadar XP
@@ -450,4 +462,182 @@ export function spawnX(side: number): number {
 /** İleri yönü: side 0 sağa (+1), side 1 sola (-1). */
 export function dirOf(side: number): 1 | -1 {
   return side === 0 ? 1 : -1;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Çağ kartları: her kademe atlayışında 3 karttan biri seçilir, etkisi maç boyunca sürer.
+// ─────────────────────────────────────────────────────────────
+
+/** Kartların değiştirdiği çarpanlar (1 = etkisiz; bounce/echo/regen için 0 = yok). */
+export interface Mods {
+  unitHp: number; // birim canı
+  unitDmg: number; // birim hasarı
+  rangedDmg: number; // menzilli hasarı
+  rangedRange: number; // menzilli menzili
+  speed: number; // yürüme hızı
+  train: number; // üretim süresi
+  heavyCost: number; // ağır golem maliyeti
+  bounty: number; // öldürme altını
+  income: number; // pasif gelir
+  xp: number; // XP kazancı
+  turretRange: number; // kule + karakol menzili
+  turretDmg: number; // kule + karakol hasarı
+  turretBounce: number; // kule atışı yakındaki bir düşmana bu oranda seker
+  specialCd: number; // özel güç bekleme süresi
+  specialEcho: number; // özel güç aynı yere ikinci kez bu oranda vurur
+  outpostHp: number; // karakol canı
+  outpostRegen: number; // savaşmayan karakol saniyede canının bu oranını onarır
+  castleHp: number; // kale canı
+  cmdPower: number; // komutan can + hasar
+  cmdCd: number; // komutan yeteneği bekleme süresi
+}
+
+export const BASE_MODS: Mods = {
+  unitHp: 1,
+  unitDmg: 1,
+  rangedDmg: 1,
+  rangedRange: 1,
+  speed: 1,
+  train: 1,
+  heavyCost: 1,
+  bounty: 1,
+  income: 1,
+  xp: 1,
+  turretRange: 1,
+  turretDmg: 1,
+  turretBounce: 0,
+  specialCd: 1,
+  specialEcho: 0,
+  outpostHp: 1,
+  outpostRegen: 0,
+  castleHp: 1,
+  cmdPower: 1,
+  cmdCd: 1,
+};
+/** Toplanarak birleşen alanlar (diğerleri çarpılır). */
+const ADDITIVE: (keyof Mods)[] = ['turretBounce', 'specialEcho', 'outpostRegen'];
+
+export type CardCat = 'ordu' | 'ekonomi' | 'savunma' | 'güç';
+export interface CardDef {
+  id: string;
+  name: string;
+  desc: string;
+  icon: string;
+  cat: CardCat;
+  mods: Partial<Mods>;
+}
+
+export const CARDS: CardDef[] = [
+  { id: 'foundry', name: 'Döküm Ustalığı', icon: '⚒️', cat: 'ordu', desc: 'Ağır golemler %25 ucuz.', mods: { heavyCost: 0.75 } },
+  { id: 'alloy', name: 'Hafif Alaşım', icon: '🪶', cat: 'ordu', desc: 'Birimler %15 hızlı yürür, %20 hızlı üretilir.', mods: { speed: 1.15, train: 0.8 } },
+  { id: 'vital', name: 'Diri Çekirdek', icon: '💚', cat: 'ordu', desc: 'Tüm birimlerin canı +%15.', mods: { unitHp: 1.15 } },
+  { id: 'warcry', name: 'Savaş Narası', icon: '📯', cat: 'ordu', desc: 'Tüm birimler +%12 hasar verir.', mods: { unitDmg: 1.12 } },
+  { id: 'marksman', name: 'Keskin Nişan', icon: '🎯', cat: 'ordu', desc: 'Menzilliler +%25 hasar, +%15 menzil.', mods: { rangedDmg: 1.25, rangedRange: 1.15 } },
+  { id: 'loot', name: 'Ganimet Simyası', icon: '💰', cat: 'ekonomi', desc: 'Öldürmelerden %35 fazla altın.', mods: { bounty: 1.35 } },
+  { id: 'vein', name: 'Altın Damarı', icon: '⛏️', cat: 'ekonomi', desc: 'Pasif gelir +%35.', mods: { income: 1.35 } },
+  { id: 'wisdom', name: 'Bilgelik Taşı', icon: '📜', cat: 'ekonomi', desc: 'Tüm XP kazancı +%35: sonraki çağa daha erken geçersin.', mods: { xp: 1.35 } },
+  { id: 'ricochet', name: 'Seken Atış', icon: '🔁', cat: 'savunma', desc: 'Kule ve karakol atışları yakındaki bir düşmana daha seker (%50).', mods: { turretBounce: 0.5 } },
+  { id: 'lens', name: 'Gözcü Merceği', icon: '🔭', cat: 'savunma', desc: 'Kule ve karakol menzili +%20, hasarı +%15.', mods: { turretRange: 1.2, turretDmg: 1.15 } },
+  { id: 'masonry', name: 'Taş Örgü', icon: '🧱', cat: 'savunma', desc: 'Karakolların canı +%40; savaşmazken kendini onarır.', mods: { outpostHp: 1.4, outpostRegen: 0.03 } },
+  { id: 'rampart', name: 'Sur Tahkimi', icon: '🏰', cat: 'savunma', desc: 'Kale canı +%30.', mods: { castleHp: 1.3 } },
+  { id: 'echo', name: 'Çifte Yağmur', icon: '☄️', cat: 'güç', desc: 'Özel güç 1 sn sonra aynı yere ikinci kez vurur (%60).', mods: { specialEcho: 0.6 } },
+  { id: 'distill', name: 'Hızlı Damıtma', icon: '⚗️', cat: 'güç', desc: 'Özel güç %40 daha sık hazır olur.', mods: { specialCd: 0.6 } },
+  { id: 'banner', name: 'Sancaktar', icon: '🚩', cat: 'güç', desc: 'Komutan +%30 can ve hasar; yeteneği %30 daha sık.', mods: { cmdPower: 1.3, cmdCd: 0.7 } },
+];
+export const CARD_OFFER = 3;
+const CARD_BY_ID = new Map(CARDS.map((c) => [c.id, c]));
+
+export function cardDef(id: string): CardDef | undefined {
+  return CARD_BY_ID.get(id);
+}
+
+/** Sahip olunan kartların birleşik etkisi. */
+export function cardMods(cards: { forEach(cb: (id: string) => void): void } | undefined): Mods {
+  const m: Mods = { ...BASE_MODS };
+  cards?.forEach((id) => {
+    const c = CARD_BY_ID.get(id);
+    if (!c) return;
+    for (const k in c.mods) {
+      const key = k as keyof Mods;
+      const v = c.mods[key]!;
+      m[key] = ADDITIVE.includes(key) ? m[key] + v : m[key] * v;
+    }
+  });
+  return m;
+}
+
+/** Kartlar dahil birim fiyatı. */
+export function unitCost(tier: number, arch: Arch, mods: Mods = BASE_MODS): number {
+  const c = unitDef(tier, arch).cost;
+  return arch === 'heavy' && mods.heavyCost !== 1 ? round5(c * mods.heavyCost) : c;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Eter Kaynağı: ortanın bir yanında belirir, tek başına tutan taraf ödülü alır.
+// ─────────────────────────────────────────────────────────────
+export const SOURCE_FIRST = 120; // ilk kaynağın belirdiği an (sn)
+export const SOURCE_EVERY = 150; // alındıktan sonra yenisi bu kadar sonra
+export const SOURCE_XS = [750, 1250]; // sırayla bu iki yerde belirir
+export const SOURCE_RADIUS = 90;
+export const SOURCE_TIME = 6; // tek başına bu kadar tutmak gerekir
+export const SOURCE_DECAY = 0.12; // kimse yokken ilerleme saniyede bu kadar söner
+export type SourceKind = 'gold' | 'fury' | 'heal';
+export const SOURCE_KINDS: Record<SourceKind, { name: string; desc: string; icon: string }> = {
+  gold: { name: 'Altın Pınarı', icon: '💰', desc: '45 saniyelik gelir kadar altın' },
+  fury: { name: 'Eter Öfkesi', icon: '🔥', desc: '25 sn boyunca tüm birimlerin +%30 hasar, +%20 hız' },
+  heal: { name: 'Yaşam Pınarı', icon: '💚', desc: 'Tüm birimler tam can; kale ve karakollar onarılır' },
+};
+export const SOURCE_KIND_LIST: SourceKind[] = ['gold', 'fury', 'heal'];
+export const SOURCE_GOLD_S = 45;
+export const FURY_TIME = 25;
+export const FURY_DMG = 1.3;
+export const FURY_SPEED = 1.2;
+export const HEAL_CASTLE = 0.1; // kale azami canının bu oranı
+export const HEAL_OUTPOST = 0.3;
+
+// ─────────────────────────────────────────────────────────────
+//  Komutan: her oyuncunun tek, seviye atlayan, ölünce geri dönen birimi.
+// ─────────────────────────────────────────────────────────────
+export const CMD_SPAWN_DELAY = 3; // maç başında doğması (sn)
+export const CMD_RESPAWN = 30; // ölünce geri dönme süresi (sn)
+export const CMD_START_CD = 12; // yeteneğin ilk hazır olması (sn)
+export const CMD_SKILL_CD = 28;
+export const CMD_SKILL_NAME = 'Sarsıcı Darbe';
+export const CMD_LEAP = 150; // ileri atılma mesafesi
+export const CMD_REACH = 280; // önündeki düşman bu mesafedeyse yetenek kullanılabilir
+export const CMD_SLAM_R = 85; // darbe yarıçapı
+export const CMD_SLAM_MULT = 3; // darbe hasarı = komutan hasarı × bu
+export const CMD_STUN = 1.5; // sersemletme (ağırlarda yarısı)
+export const CMD_LAND = 0.3; // atılıştan yere iniş süresi (sn)
+/** Seviye eşikleri: komutanın öldürdüğü düşman sayısı (Sv1..Sv5). */
+export const CMD_LEVELS = [0, 3, 8, 15, 25];
+export const CMD_LEVEL_BONUS = 0.12; // seviye başına can + hasar
+export const CMD_NAMES = ['Kütük Komutan', 'Bronz Komutan', 'Demir Komutan', 'Kristal Komutan', 'Eter Komutanı'];
+
+export function cmdLevelOf(kills: number): number {
+  let lvl = 1;
+  for (let i = 1; i < CMD_LEVELS.length; i++) if (kills >= CMD_LEVELS[i]) lvl = i + 1;
+  return lvl;
+}
+
+/** Komutanın istatistikleri: kademenin ağır golemi kadar dayanıklı, daha hızlı vurur; yakın dövüş sayılır. */
+export function commanderDef(tier: number, lvl: number, power = 1): UnitDef {
+  const m = unitDef(tier, 'melee');
+  const hv = unitDef(tier, 'heavy');
+  const k = (1 + CMD_LEVEL_BONUS * (lvl - 1)) * power;
+  const value = hv.cost * 1.5;
+  return {
+    ...m,
+    name: CMD_NAMES[tier],
+    hp: Math.round(hv.hp * 1.3 * k),
+    dmg: Math.round(hv.dmg * 0.9 * k * 10) / 10,
+    atkCd: 1.0,
+    range: 8,
+    speed: m.speed - 4,
+    radius: 16,
+    train: 0,
+    cost: round5(value),
+    bounty: Math.round(value * BOUNTY_RATE),
+    xp: Math.round(value * XP_KILL_RATE),
+  };
 }

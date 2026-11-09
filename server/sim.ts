@@ -2,7 +2,7 @@
 // Colyseus Room'dan bağımsızdır; balans simülasyonu (tools/balance-sim.ts) da bunu kullanır.
 import * as B from '../shared/balance';
 import type { Arch } from '../shared/balance';
-import { STATUS_AURA, STATUS_BURN, STATUS_SLOW, type EndReason, type FxEvent } from '../shared/protocol';
+import { STATUS_AURA, STATUS_BURN, STATUS_FURY, STATUS_SLOW, STATUS_STUN, type EndReason, type FxEvent } from '../shared/protocol';
 import { BattleState, Outpost, Player, TurretSlot, Unit } from './state';
 
 type Emit = (fx: FxEvent) => void;
@@ -17,6 +17,8 @@ export class Simulation {
   private zones: { side: number; x: number; r: number; dps: number; t: number }[] = [];
   /** Bu adımda ölen birimler; adım sonunda state'ten silinir (aynı birim iki kez ölmesin). */
   private dying = new Set<Unit>();
+  /** Tarafların çağ kartı etkileri (kart seçilince yeniden hesaplanır). */
+  private mods: B.Mods[] = [{ ...B.BASE_MODS }, { ...B.BASE_MODS }];
 
   constructor(
     public state: BattleState,
@@ -24,6 +26,11 @@ export class Simulation {
   ) {}
 
   // ── yardımcılar ──────────────────────────────────────────
+  /** Tarafın kart etkileri. */
+  modsOf(side: number): B.Mods {
+    return this.mods[side] ?? B.BASE_MODS;
+  }
+
   player(side: number): Player | undefined {
     let found: Player | undefined;
     this.state.players.forEach((p) => {
@@ -92,6 +99,16 @@ export class Simulation {
     p.trained = 0;
     p.goldEarned = 0;
     p.earnedF = 0;
+    p.cards.clear();
+    p.offer.clear();
+    p.picks = 0;
+    p.furyT = 0;
+    p.cmdId = '';
+    p.cmdRespawn = B.CMD_SPAWN_DELAY;
+    p.cmdCd = B.CMD_START_CD;
+    p.cmdLvl = 1;
+    p.cmdKills = 0;
+    this.mods[p.side] = { ...B.BASE_MODS };
   }
 
   /** Maçı (yeniden) başlatır: geri sayım. */
@@ -107,6 +124,13 @@ export class Simulation {
       this.state.outposts.push(o);
     }
     this.state.players.forEach((p) => this.resetPlayer(p));
+    const src = this.state.src;
+    src.active = false;
+    src.cap = 0;
+    src.capSide = -1;
+    src.next = B.SOURCE_FIRST;
+    src.spot = Math.random() < 0.5 ? 0 : 1;
+    src.x = B.SOURCE_XS[src.spot];
     this.state.winner = -1;
     this.state.reason = '';
     this.state.time = 0;
@@ -130,10 +154,11 @@ export class Simulation {
   train(p: Player, arch: Arch): boolean {
     if (!this.playing() || !B.isArch(arch)) return false;
     if (p.queue.length >= B.MAX_QUEUE) return false;
-    const def = B.unitDef(p.tier, arch);
-    if (p.goldF < def.cost) return false;
-    this.spend(p, def.cost);
-    p.queue.push(`${p.tier}:${arch}`);
+    const cost = B.unitCost(p.tier, arch, this.modsOf(p.side));
+    if (p.goldF < cost) return false;
+    this.spend(p, cost);
+    // "kademe:tip:ödenen" (iptalde ödenen kadar iade)
+    p.queue.push(`${p.tier}:${arch}:${cost}`);
     return true;
   }
 
@@ -141,11 +166,11 @@ export class Simulation {
     if (!this.playing()) return false;
     if (!Number.isInteger(index) || index < 0 || index >= p.queue.length) return false;
     const entry = p.queue.at(index)!;
-    const [t, arch] = entry.split(':');
-    const def = B.unitDef(Number(t), arch as Arch);
+    const [t, arch, paid] = entry.split(':');
+    const refund = Number(paid) || B.unitDef(Number(t), arch as Arch).cost;
     p.queue.splice(index, 1);
     if (index === 0) p.trainProgress = 0;
-    this.earn(p, def.cost, false);
+    this.earn(p, refund, false);
     return true;
   }
 
@@ -167,10 +192,153 @@ export class Simulation {
     const next = B.TIERS[p.tier + 1];
     if (p.xpF < next.xpToReach) return false;
     p.tier += 1;
-    const delta = next.baseHp - p.baseMaxHp;
-    p.baseMaxHp = next.baseHp;
+    const maxHp = next.baseHp * this.modsOf(p.side).castleHp;
+    const delta = maxHp - p.baseMaxHp;
+    p.baseMaxHp = maxHp;
     p.baseHp = Math.min(p.baseMaxHp, p.baseHp + delta);
+    this.refreshCommander(p);
+    // çağ kartı hakkı: 3 kart sunulur (önceki seçilmediyse sıraya eklenir)
+    p.picks += 1;
+    if (p.offer.length === 0) this.makeOffer(p);
     this.emit({ t: 'evolve', side: p.side, tier: p.tier });
+    return true;
+  }
+
+  // ── çağ kartları ─────────────────────────────────────────
+  private makeOffer(p: Player) {
+    p.offer.clear();
+    const owned = new Set<string>();
+    p.cards.forEach((id) => owned.add(id));
+    const pool = B.CARDS.filter((c) => !owned.has(c.id)).map((c) => c.id);
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    for (const id of pool.slice(0, B.CARD_OFFER)) p.offer.push(id);
+  }
+
+  cardPick(p: Player, id: unknown): boolean {
+    if (this.state.phase !== 'playing' || p.picks <= 0 || typeof id !== 'string') return false;
+    let found = false;
+    p.offer.forEach((o) => {
+      if (o === id) found = true;
+    });
+    if (!found || !B.cardDef(id)) return false;
+    const prev = this.modsOf(p.side);
+    p.cards.push(id);
+    const next = B.cardMods(p.cards);
+    this.mods[p.side] = next;
+    p.picks -= 1;
+    p.offer.clear();
+    if (p.picks > 0) this.makeOffer(p);
+    // var olanlara hemen uygulanan etkiler
+    const ratio = (k: keyof B.Mods) => next[k] / prev[k];
+    const hpK = ratio('unitHp');
+    if (hpK !== 1) {
+      this.state.units.forEach((u) => {
+        if (u.side !== p.side || !this.alive(u)) return;
+        u.maxHp *= hpK;
+        u.hp *= hpK;
+      });
+    }
+    const castleK = ratio('castleHp');
+    if (castleK !== 1) {
+      const old = p.baseMaxHp;
+      p.baseMaxHp = old * castleK;
+      p.baseHp += p.baseMaxHp - old;
+    }
+    const opK = ratio('outpostHp');
+    if (opK !== 1) {
+      this.state.outposts.forEach((o) => {
+        if (o.owner !== p.side || !o.built) return;
+        o.maxHp *= opK;
+        o.hp *= opK;
+      });
+    }
+    if (next.cmdPower !== prev.cmdPower) this.refreshCommander(p);
+    this.emit({ t: 'card', side: p.side, id });
+    return true;
+  }
+
+  // ── komutan ──────────────────────────────────────────────
+  private commander(p: Player): Unit | undefined {
+    if (!p.cmdId) return undefined;
+    const u = this.state.units.get(p.cmdId);
+    return this.alive(u) ? u : undefined;
+  }
+
+  /** Komutanın istatistiklerini kademe / seviye / kartlara göre yeniler (can oranı korunur). */
+  private refreshCommander(p: Player) {
+    const u = this.commander(p);
+    if (!u) return;
+    const mods = this.modsOf(p.side);
+    const def = B.commanderDef(p.tier, p.cmdLvl, mods.cmdPower);
+    const frac = u.maxHp > 0 ? u.hp / u.maxHp : 1;
+    u.def = def;
+    u.tier = p.tier;
+    u.lvl = p.cmdLvl;
+    u.maxHp = def.hp * mods.unitHp;
+    u.hp = Math.max(1, frac * u.maxHp);
+  }
+
+  private spawnCommander(p: Player, x: number) {
+    const mods = this.modsOf(p.side);
+    const def = B.commanderDef(p.tier, p.cmdLvl, mods.cmdPower);
+    const u = this.spawn(p, def, x);
+    u.cmd = true;
+    u.lvl = p.cmdLvl;
+    p.cmdId = u.id;
+    this.emit({ t: 'cmd', side: p.side, k: 'spawn', id: u.id, x: u.x });
+  }
+
+  /** Sarsıcı Darbe: komutan öndeki düşmanın üstüne atılır, çevresine büyük hasar verip sersemletir. */
+  cmdSkill(p: Player): boolean {
+    if (!this.playing() || p.cmdCd > 0) return false;
+    const u = this.commander(p);
+    if (!u) return false;
+    const side = p.side;
+    const dir = B.dirOf(side);
+    // öndeki en yakın düşman
+    let front: Unit | undefined;
+    let gap = Infinity;
+    this.state.units.forEach((e) => {
+      if (e.side === side || !this.alive(e)) return;
+      const d = (e.x - u.x) * dir - u.def.radius - e.def.radius;
+      if (d > -40 && d < gap) {
+        gap = d;
+        front = e;
+      }
+    });
+    if (!front || gap > B.CMD_REACH) return false;
+    // düşman yapılarını (kale, kurulu karakol) atlayamaz
+    let wall = (B.baseFrontX(1 - side) - u.x) * dir - u.def.radius;
+    this.state.outposts.forEach((o) => {
+      if (!o.built || o.owner !== 1 - side) return;
+      const g = (o.x - u.x) * dir - u.def.radius - B.OUTPOST_HALF;
+      if (g >= 0 && g < wall) wall = g;
+    });
+    const leap = Math.max(0, Math.min(B.CMD_LEAP, gap, wall));
+    u.x += dir * leap;
+    u.stunT = 0;
+    p.cmdCd = B.CMD_SKILL_CD * this.modsOf(side).cmdCd;
+    this.emit({ t: 'cmd', side, k: 'leap', id: u.id, x: u.x });
+    this.pending.push({
+      t: B.CMD_LAND,
+      fn: () => {
+        if (!this.alive(u)) return;
+        const mods = this.modsOf(side);
+        const dmg = u.def.dmg * B.CMD_SLAM_MULT * mods.unitDmg * (p.furyT > 0 ? B.FURY_DMG : 1);
+        const hits: Unit[] = [];
+        this.state.units.forEach((e) => {
+          if (e.side !== side && this.alive(e) && Math.abs(e.x - u.x) <= B.CMD_SLAM_R + e.def.radius) hits.push(e);
+        });
+        for (const e of hits) {
+          e.stunT = Math.max(e.stunT, B.CMD_STUN * (e.arch === 'heavy' ? 0.5 : 1));
+          this.damage(e, dmg, side, 'blast', u);
+        }
+        this.emit({ t: 'cmd', side, k: 'slam', id: u.id, x: u.x });
+      },
+    });
     return true;
   }
 
@@ -238,8 +406,8 @@ export class Simulation {
       o.built = true;
       o.armed = false;
       o.tier = p.tier;
-      o.maxHp = def.hp;
-      o.hp = def.hp;
+      o.maxHp = def.hp * this.modsOf(p.side).outpostHp;
+      o.hp = o.maxHp;
       o.cd = 0.5;
       this.emit({ t: 'outpost', i: index, k: 'built', side: p.side });
       return true;
@@ -259,7 +427,7 @@ export class Simulation {
     this.spend(p, cost);
     const frac = o.hp / o.maxHp;
     o.tier = p.tier;
-    o.maxHp = B.TIERS[p.tier].outpost.hp;
+    o.maxHp = B.TIERS[p.tier].outpost.hp * this.modsOf(p.side).outpostHp;
     o.hp = Math.max(frac, 0.5) * o.maxHp;
     this.emit({ t: 'outpost', i: index, k: 'built', side: p.side });
     return true;
@@ -298,18 +466,28 @@ export class Simulation {
     const tier = p.tier;
     const dmg = B.TIERS[tier].special.damage;
     const side = p.side;
-    p.specialCd = B.SPECIAL_CD;
+    const mods = this.modsOf(side);
+    p.specialCd = B.SPECIAL_CD * mods.specialCd;
+    const strike = (k: number) => () => {
+      const hits: Unit[] = [];
+      this.state.units.forEach((u) => {
+        if (u.side !== side && u.x >= x0 && u.x <= x1) hits.push(u);
+      });
+      for (const u of hits) this.damage(u, dmg * k, side, 'blast');
+    };
     this.emit({ t: 'special', side, tier, x0, x1 });
-    this.pending.push({
-      t: B.SPECIAL_DELAY,
-      fn: () => {
-        const hits: Unit[] = [];
-        this.state.units.forEach((u) => {
-          if (u.side !== side && u.x >= x0 && u.x <= x1) hits.push(u);
-        });
-        for (const u of hits) this.damage(u, dmg, side, 'blast');
-      },
-    });
+    this.pending.push({ t: B.SPECIAL_DELAY, fn: strike(1) });
+    // Çifte Yağmur: 1 sn sonra aynı yere ikinci yağmur
+    if (mods.specialEcho > 0) {
+      this.pending.push({
+        t: B.SPECIAL_DELAY + 1,
+        fn: () => {
+          if (this.state.phase !== 'playing') return;
+          this.emit({ t: 'special', side, tier, x0, x1, echo: true });
+          this.pending.push({ t: B.SPECIAL_DELAY, fn: strike(mods.specialEcho) });
+        },
+      });
+    }
     return true;
   }
 
@@ -335,15 +513,100 @@ export class Simulation {
     }
 
     s.players.forEach((p) => this.tickPlayer(p, dt));
+    if (s.time > B.SIEGE_TIME) {
+      this.tickSiegeDecay(dt);
+      if (s.phase !== 'playing') return;
+    }
     this.tickStatus(dt);
     this.tickCapture(dt);
+    this.tickSource(dt);
     this.flushDead();
     this.tickUnits(dt);
     this.flushDead();
     if (s.phase !== 'playing') return;
     s.players.forEach((p) => this.tickTurrets(p, dt));
-    this.tickOutpostTurrets(dt);
+    this.tickOutposts(dt);
     this.flushDead();
+  }
+
+  /** Yıkım Saati: maç uzadıkça kaleler ve karakollar yavaşça çöker (kilitlenmiş maçlar biter). */
+  private tickSiegeDecay(dt: number) {
+    this.state.outposts.forEach((o, i) => {
+      if (o.built && o.owner >= 0) this.damageOutpost(i, o.maxHp * B.SIEGE_DECAY * dt, 1 - o.owner);
+    });
+    // canı (oranca) daha az olan kale önce düşer
+    const ps: Player[] = [];
+    this.state.players.forEach((p) => ps.push(p));
+    ps.sort((a, b) => a.baseHp / a.baseMaxHp - b.baseHp / b.baseMaxHp);
+    for (const p of ps) {
+      this.damageBase(p.side, p.baseMaxHp * B.SIEGE_DECAY * dt, 1 - p.side);
+      if (this.state.phase !== 'playing') return;
+    }
+  }
+
+  /** Eter Kaynağı: belirir; alanda sadece bir tarafın birimi varken ilerleme dolar, dolunca ödül verilir. */
+  private tickSource(dt: number) {
+    const s = this.state.src;
+    if (!s.active) {
+      s.next = Math.max(0, s.next - dt);
+      if (s.next > 0) return;
+      s.active = true;
+      s.x = B.SOURCE_XS[s.spot];
+      s.spot = 1 - s.spot;
+      s.kind = B.SOURCE_KIND_LIST[Math.floor(Math.random() * B.SOURCE_KIND_LIST.length)];
+      s.cap = 0;
+      s.capSide = -1;
+      this.emit({ t: 'src', k: 'spawn', kind: s.kind, x: s.x, side: -1 });
+      return;
+    }
+    const n = [0, 0];
+    this.state.units.forEach((u) => {
+      if (this.alive(u) && Math.abs(u.x - s.x) <= B.SOURCE_RADIUS) n[u.side]++;
+    });
+    const only = n[0] > 0 && n[1] === 0 ? 0 : n[1] > 0 && n[0] === 0 ? 1 : -1;
+    if (only < 0) {
+      // boşsa yavaşça söner, çekişmeliyse donar
+      if (n[0] === 0 && n[1] === 0 && s.cap > 0) {
+        s.cap = Math.max(0, s.cap - B.SOURCE_DECAY * dt);
+        if (s.cap <= 0) s.capSide = -1;
+      }
+      return;
+    }
+    const rate = dt / B.SOURCE_TIME;
+    if (s.capSide !== only && s.cap > 0) {
+      // önce rakibin ilerlemesini sil
+      s.cap = Math.max(0, s.cap - rate);
+      if (s.cap <= 0) s.capSide = -1;
+      return;
+    }
+    s.capSide = only;
+    s.cap = Math.min(1, s.cap + rate);
+    if (s.cap >= 1) this.claimSource(only);
+  }
+
+  private claimSource(side: number) {
+    const s = this.state.src;
+    const kind = s.kind as B.SourceKind;
+    s.active = false;
+    s.next = B.SOURCE_EVERY;
+    s.cap = 0;
+    s.capSide = -1;
+    this.emit({ t: 'src', k: 'taken', kind, x: s.x, side });
+    const p = this.player(side);
+    if (!p) return;
+    if (kind === 'gold') {
+      this.earn(p, B.TIERS[p.tier].income * B.SOURCE_GOLD_S);
+    } else if (kind === 'fury') {
+      p.furyT = B.FURY_TIME;
+    } else {
+      this.state.units.forEach((u) => {
+        if (u.side === side && this.alive(u)) u.hp = u.maxHp;
+      });
+      p.baseHp = Math.min(p.baseMaxHp, p.baseHp + p.baseMaxHp * B.HEAL_CASTLE);
+      this.state.outposts.forEach((o) => {
+        if (o.owner === side && o.built) o.hp = Math.min(o.maxHp, o.hp + o.maxHp * B.HEAL_OUTPOST);
+      });
+    }
   }
 
   /** Noktaları ele geçirme: alanda sadece bir tarafın birimi varsa çubuk o taraf lehine dolar. */
@@ -388,23 +651,29 @@ export class Simulation {
     });
   }
 
-  /** Kurulu karakolların kuleleri: kendi kademesinin Hafif kulesi gibi ateş eder. */
-  private tickOutpostTurrets(dt: number) {
+  /** Kurulu karakollar: (Taş Örgü kartıyla) kendini onarır; silahlıysa kademesinin Hafif kulesi gibi ateş eder. */
+  private tickOutposts(dt: number) {
     this.state.outposts.forEach((o) => {
-      if (!o.built || !o.armed || o.owner < 0) return;
-      o.cd = Math.max(0, o.cd - dt);
-      if (o.cd > 0) return;
+      if (!o.built || o.owner < 0) return;
       const side = o.owner;
+      const mods = this.modsOf(side);
       const dir = B.dirOf(side);
+      const range = B.OUTPOST_RANGE * mods.turretRange;
       const list: { u: Unit; d: number }[] = [];
       this.state.units.forEach((u) => {
         if (u.side === side || !this.alive(u)) return;
         const d = (u.x - o.x) * dir - u.def.radius;
-        if (d >= -B.OUTPOST_HALF && d <= B.OUTPOST_RANGE) list.push({ u, d });
+        if (d >= -B.OUTPOST_HALF && d <= range) list.push({ u, d });
       });
-      if (!list.length) return;
+      if (mods.outpostRegen > 0 && o.hp < o.maxHp && !list.length) {
+        o.hp = Math.min(o.maxHp, o.hp + o.maxHp * mods.outpostRegen * dt);
+      }
+      if (!o.armed) return;
+      o.cd = Math.max(0, o.cd - dt);
+      if (o.cd > 0 || !list.length) return;
       list.sort((a, b) => a.d - b.d);
-      const def = { ...B.turretDef(o.tier, 0), range: B.OUTPOST_RANGE };
+      const base = B.turretDef(o.tier, 0);
+      const def = { ...base, range, dmg: base.dmg * mods.turretDmg };
       o.cd = def.cd;
       o.shots = (o.shots + 1) % 60000;
       o.tgt = list[0].u.id;
@@ -464,7 +733,7 @@ export class Simulation {
       return false;
     }
     this.dying.add(target);
-    this.onKill(target, killerSide);
+    this.onKill(target, killerSide, attacker);
     if (tp.deathHeal) {
       const { r, pct } = tp.deathHeal;
       this.state.units.forEach((u) => {
@@ -488,10 +757,12 @@ export class Simulation {
     this.state.units.forEach((u) => {
       if (u.def.ability.p.aura) auras.push(u);
     });
+    const fury = [this.player(0)?.furyT ?? 0, this.player(1)?.furyT ?? 0];
     this.state.units.forEach((u) => {
       if (!this.alive(u)) return;
       const p = u.def.ability.p;
       if (u.slowT > 0) u.slowT = Math.max(0, u.slowT - dt);
+      if (u.stunT > 0) u.stunT = Math.max(0, u.stunT - dt);
       // Kök Salma: savaşmıyorken iyileşir
       if (p.regen && u.state !== 2 && u.hp < u.maxHp) u.hp = Math.min(u.maxHp, u.hp + u.maxHp * p.regen * dt);
       // Aura: yakınında dost Titan varsa hasar bonusu
@@ -510,16 +781,27 @@ export class Simulation {
         if (this.damage(u, z.dps * dt, z.side, 'burn')) break;
       }
       const status =
-        (u.slowT > 0 ? STATUS_SLOW : 0) | (burning ? STATUS_BURN : 0) | (u.auraMul > 1 ? STATUS_AURA : 0);
+        (u.slowT > 0 ? STATUS_SLOW : 0) |
+        (burning ? STATUS_BURN : 0) |
+        (u.auraMul > 1 ? STATUS_AURA : 0) |
+        (u.stunT > 0 ? STATUS_STUN : 0) |
+        (fury[u.side] > 0 ? STATUS_FURY : 0);
       if (u.status !== status) u.status = status;
     });
   }
 
   /** Bir birimin başka bir birime saldırısı: karşılık çarpanı + saldıranın yetenekleri. */
+  /** Birimin kartlar + Eter Öfkesi ile hasar çarpanı. */
+  private dmgMul(u: Unit): number {
+    const mods = this.modsOf(u.side);
+    const fury = (this.player(u.side)?.furyT ?? 0) > 0 ? B.FURY_DMG : 1;
+    return u.auraMul * mods.unitDmg * (u.def.arch === 'ranged' ? mods.rangedDmg : 1) * fury;
+  }
+
   private unitAttack(u: Unit, target: Unit, side: number, enemies: Unit[]) {
     const def = u.def;
     const p = def.ability.p;
-    let dmg = def.dmg * B.COUNTER[def.arch][target.arch as Arch] * u.auraMul;
+    let dmg = def.dmg * B.COUNTER[def.arch][target.arch as Arch] * this.dmgMul(u);
     if (p.heavyBonus && target.arch === 'heavy') dmg *= 1 + p.heavyBonus;
     if (p.charge && u.chargeReady) {
       // Boğa Hücumu: güçlü ilk vuruş + geri itme (hedef kendi kalesinin gerisine itilemez)
@@ -600,14 +882,15 @@ export class Simulation {
     this.state.outposts.forEach((o) => {
       if (o.owner === p.side) owned++;
     });
-    const income = B.TIERS[p.tier].income * (1 + owned * B.OUTPOST_INCOME);
+    const mods = this.modsOf(p.side);
+    const income = B.TIERS[p.tier].income * (1 + owned * B.OUTPOST_INCOME) * mods.income;
     this.earn(p, income * dt, false);
-    this.addXp(p, income * B.PASSIVE_XP_RATE * dt);
+    this.addXp(p, B.TIERS[p.tier].income * (1 + owned * B.OUTPOST_INCOME) * B.PASSIVE_XP_RATE * mods.xp * dt);
 
     if (p.queue.length > 0) {
       const [t, arch] = p.queue.at(0)!.split(':');
       const def = B.unitDef(Number(t), arch as Arch);
-      if (p.trainProgress < 1) p.trainProgress = Math.min(1, p.trainProgress + dt / def.train);
+      if (p.trainProgress < 1) p.trainProgress = Math.min(1, p.trainProgress + dt / (def.train * mods.train));
       const x = p.trainProgress >= 1 && this.countUnits(p.side) < B.MAX_UNITS_PER_SIDE ? this.freeSpawnX(p.side, def.radius) : null;
       if (x !== null) {
         this.spawn(p, def, x);
@@ -617,9 +900,19 @@ export class Simulation {
       }
     }
     if (p.specialCd > 0) p.specialCd = Math.max(0, p.specialCd - dt);
+    if (p.furyT > 0) p.furyT = Math.max(0, p.furyT - dt);
+    // komutan: yetenek beklemesi ve ölünce geri dönüş
+    if (p.cmdCd > 0) p.cmdCd = Math.max(0, p.cmdCd - dt);
+    if (!p.cmdId) {
+      if (p.cmdRespawn > 0) p.cmdRespawn = Math.max(0, p.cmdRespawn - dt);
+      if (p.cmdRespawn <= 0) {
+        const x = this.freeSpawnX(p.side, 16);
+        if (x !== null) this.spawnCommander(p, x);
+      }
+    }
   }
 
-  private spawn(p: Player, def: B.UnitDef, x: number) {
+  private spawn(p: Player, def: B.UnitDef, x: number): Unit {
     const u = new Unit();
     u.id = String(this.nextId++);
     u.side = p.side;
@@ -627,11 +920,12 @@ export class Simulation {
     u.arch = def.arch;
     u.def = def;
     u.x = x;
-    u.hp = def.hp;
-    u.maxHp = def.hp;
+    u.maxHp = def.hp * this.modsOf(p.side).unitHp;
+    u.hp = u.maxHp;
     u.cd = def.atkCd * 0.4;
     u.state = 0;
     this.state.units.set(u.id, u);
+    return u;
   }
 
   private tickUnits(dt: number) {
@@ -655,7 +949,10 @@ export class Simulation {
     for (const side of order) {
       const dir = B.dirOf(side);
       const enemyBaseX = B.baseFrontX(1 - side);
-      const hold = this.player(side)?.stance === 'hold';
+      const pl = this.player(side);
+      const hold = pl?.stance === 'hold';
+      const mods = this.modsOf(side);
+      const speedMul = mods.speed * ((pl?.furyT ?? 0) > 0 ? B.FURY_SPEED : 1);
       // "Savun" duruşunda her birimin dizildiği yer (öndeki birimin ön kenarı bu çizgide):
       // en öndeki karakol daha ilerideyse onun önü, değilse kale önü
       const own = B.baseFrontX(side);
@@ -671,7 +968,9 @@ export class Simulation {
       for (const u of sides[side]) {
         if (!this.alive(u)) continue;
         const def = u.def;
-        const speed = def.speed * (u.slowT > 0 ? B.SLOW_FACTOR : 1);
+        const speed = def.speed * speedMul * (u.slowT > 0 ? B.SLOW_FACTOR : 1);
+        const range = def.arch === 'ranged' ? def.range * mods.rangedRange : def.range;
+        const stunned = u.stunT > 0;
         const enemy = front(1 - side);
         const gapEnemy = enemy ? (enemy.x - u.x) * dir - def.radius - enemy.def.radius : Infinity;
         // önümdeki en yakın düşman yapısı: karakol ya da kale
@@ -687,8 +986,9 @@ export class Simulation {
         u.cd = Math.max(0, u.cd - dt);
 
         let target: Unit | 'base' | number | null = null; // number = karakol indeksi
-        if (enemy && gapEnemy <= def.range && gapEnemy <= gapStruct + 0.5) target = enemy;
-        else if (gapStruct <= def.range) target = structIdx >= 0 ? structIdx : 'base';
+        if (stunned) target = null; // sersemlemiş: yürüyemez, saldıramaz
+        else if (enemy && gapEnemy <= range && gapEnemy <= gapStruct + 0.5) target = enemy;
+        else if (gapStruct <= range) target = structIdx >= 0 ? structIdx : 'base';
 
         if (target !== null) {
           u.state = 2;
@@ -702,7 +1002,7 @@ export class Simulation {
             u.atk = (u.atk + 1) % 60000;
             if (target === 'base' || typeof target === 'number') {
               const siege = ab.siege ?? B.BASE_DMG_MULT[def.arch];
-              const dmg = def.dmg * siege * u.auraMul;
+              const dmg = def.dmg * siege * this.dmgMul(u) * B.siegeMult(this.state.time);
               if (target === 'base') {
                 this.damageBase(1 - side, dmg, side);
                 if (this.state.phase !== 'playing') return;
@@ -722,7 +1022,9 @@ export class Simulation {
             ahead && !squeeze ? (ahead.x - u.x) * dir - def.radius - ahead.def.radius - B.UNIT_SPACING : Infinity;
           // Savunmada bile: düşman dibimizdeyse ya da öndeki dost göğüs göğüse savaşıyorsa çatışmaya katıl
           const engage = squeeze || gapEnemy < B.HOLD_AGGRO;
-          if (hold && !engage) {
+          if (stunned) {
+            u.state = 1;
+          } else if (hold && !engage) {
             // dizilim noktasına git (ileri ya da geri)
             const want = slotX - dir * def.radius;
             const delta = (want - u.x) * dir;
@@ -775,12 +1077,14 @@ export class Simulation {
 
   private tickTurrets(p: Player, dt: number) {
     let enemies: { u: Unit; d: number }[] | null = null;
+    const mods = this.modsOf(p.side);
     for (let i = 0; i < p.turrets.length; i++) {
       const t = p.turrets.at(i)!;
       if (t.tier < 0) continue;
       t.cd = Math.max(0, t.cd - dt);
       if (t.cd > 0) continue;
-      const def = B.turretDef(t.tier, t.grade);
+      const base = B.turretDef(t.tier, t.grade);
+      const def = mods.turretRange === 1 && mods.turretDmg === 1 ? base : { ...base, range: base.range * mods.turretRange, dmg: base.dmg * mods.turretDmg };
       enemies ??= this.enemiesByDistance(p);
       const first = enemies[0];
       if (!first || first.d > def.range) continue;
@@ -794,6 +1098,24 @@ export class Simulation {
 
   /** Kulenin saldırı türüne göre hasar uygular. inLine: kaleden dışarı doğru sıralı düşmanlar. */
   private fireTurret(side: number, def: B.TurretDef, target: Unit, inLine: { u: Unit; d: number }[]) {
+    // Seken Atış kartı: atış hedefin yanındaki bir düşmana daha seker
+    const bounce = this.modsOf(side).turretBounce;
+    if (bounce > 0) {
+      let next: Unit | undefined;
+      let best: number = B.CHAIN_RANGE;
+      this.state.units.forEach((u) => {
+        if (u === target || u.side === side || !this.alive(u)) return;
+        const d = Math.abs(u.x - target.x);
+        if (d <= best) {
+          best = d;
+          next = u;
+        }
+      });
+      if (next) {
+        this.emit({ t: 'bounce', from: target.id, to: (next as Unit).id, tier: def.tier });
+        this.damage(next, def.dmg * bounce, side, 'blast');
+      }
+    }
     switch (def.kind) {
       case 'shot':
         this.damage(target, def.dmg, side, 'ranged');
@@ -855,17 +1177,33 @@ export class Simulation {
     }
   }
 
-  private onKill(u: Unit, killerSide: number) {
+  private onKill(u: Unit, killerSide: number, attacker?: Unit) {
     const killer = this.player(killerSide);
     const owner = this.player(u.side);
     if (killer) {
-      this.earn(killer, u.def.bounty);
-      this.addXp(killer, u.def.xp);
+      const km = this.modsOf(killerSide);
+      this.earn(killer, u.def.bounty * km.bounty);
+      this.addXp(killer, u.def.xp * km.xp);
       killer.kills += 1;
+      // komutan öldürdükçe seviye atlar
+      if (attacker?.cmd && attacker.side === killerSide) {
+        killer.cmdKills += 1;
+        const lvl = B.cmdLevelOf(killer.cmdKills);
+        if (lvl > killer.cmdLvl) {
+          killer.cmdLvl = lvl;
+          this.refreshCommander(killer);
+          this.emit({ t: 'cmd', side: killerSide, k: 'level', id: attacker.id, x: attacker.x, lvl });
+        }
+      }
     }
     if (owner) {
-      this.addXp(owner, u.def.xp * B.XP_LOSS_RATE);
+      this.addXp(owner, u.def.xp * B.XP_LOSS_RATE * this.modsOf(u.side).xp);
       owner.lost += 1;
+      if (u.cmd && owner.cmdId === u.id) {
+        owner.cmdId = '';
+        owner.cmdRespawn = B.CMD_RESPAWN;
+        this.emit({ t: 'cmd', side: u.side, k: 'die', id: u.id, x: u.x });
+      }
     }
   }
 

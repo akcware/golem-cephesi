@@ -1,4 +1,4 @@
-# Golem Cephesi (prototip v0.1)
+# Golem Cephesi (prototip v0.2)
 
 Tarayıcıda oynanan, online multiplayer bir koridor savaşı oyunu. İki simyacı, kalelerinden golem ordusu döküp karşı kaleye yollar.
 
@@ -25,6 +25,8 @@ npm run dev
 | `K` | En öndeki noktanda sıradaki adım: karakol kur → kademesini yükselt → üstüne kule ekle |
 | `E` | Dökümhaneyi bir sonraki kademeye yükselt (XP dolunca) |
 | `Q` | Özel güç: düşmanın ön saflarını vurur |
+| `R` | Komutanın Sarsıcı Darbesi: öndeki düşmanların üstüne atılır, alan hasarı verip sersemletir |
+| `Z` `X` `C` | Kademe atlayınca sunulan 3 çağ kartından birini seç |
 | `T` | Parana yeten en iyi kuleyi kur / eski kuleyi yükselt / yeni yuva aç (yuvaya tıklayınca seçim menüsü açılır) |
 | Sürükle, tekerlek, `A`/`D` | Haritayı kaydır (mini haritaya tıklamak da olur) |
 
@@ -52,6 +54,10 @@ npm run dev
 | Kristal | Kristal Diken (buz, yavaşlatır) | Prizma Kulesi (lazer, 3 deler) | Işın Merceği (lazer, hattı deler) |
 | Eter | Eter Kıvılcımı (zincir şimşek) | Eter Kristali (zincir şimşek) | Yıldız Çekirdeği (dev bomba + yavaşlatma) |
 - **Kademeler:** Ahşap → Bronz → Demir → Kristal → Eter. Her kademede birimler ~2.2 kat güçlenir.
+- **Çağ kartları:** Her kademe atlayışında 15 kartlık havuzdan 3 kart sunulur, biri seçilir; etkisi maç boyunca sürer. Ordu (Döküm Ustalığı, Hafif Alaşım, Diri Çekirdek, Savaş Narası, Keskin Nişan), ekonomi (Ganimet Simyası, Altın Damarı, Bilgelik Taşı), savunma (Seken Atış, Gözcü Merceği, Taş Örgü, Sur Tahkimi) ve güç (Çifte Yağmur, Hızlı Damıtma, Sancaktar). Rakibin seçtiği kartlar adının altında görünür.
+- **Komutan:** Her oyuncunun tek, bedava komutanı vardır: kademenin ağır golemi kadar dayanıklı, yakın dövüş sayılır (ağırlar ona karşı güçlü). Öldürdükçe seviye atlar (Sv1–Sv5, her seviye +%12), kademe atlayınca güçlenir, ölürse 30 sn sonra döner. `R`: Sarsıcı Darbe (28 sn'de bir).
+- **Eter Kaynağı:** 2. dakikada ortanın bir yanında belirir (sonrakiler 2,5 dk arayla diğer yanda). Alanında 6 sn sadece bir tarafın birimleri durursa o taraf ödülü alır: Altın Pınarı (45 sn'lik gelir), Eter Öfkesi (25 sn +%30 hasar, +%20 hız) ya da Yaşam Pınarı (tüm birimler tam can, kale ve karakollar onarılır).
+- **Yıkım Saati:** 15. dakikadan sonra kaleler ve karakollar her saniye azami canlarının %0,2'sini kaybeder, birimlerin yapılara verdiği hasar her dakika %30 artar. Savunmalar tam oturunca maç kilitlenmez.
 - Düşman öldürmek altın + XP verir. Kendi birimin ölünce de biraz XP gelir (geride kalan toparlayabilsin).
 - Bağlantısı kopan oyuncu 20 sn içinde geri gelebilir; bu sürede oyun donar.
 
@@ -75,6 +81,7 @@ client/ui/          Menü ve oyun içi arayüz (HTML)
 tools/balance-sim.ts Bot'a karşı bot maçlarıyla denge raporu
 tools/rusher.ts     Botu sınamak için oyuncu taklitleri (saldırgan, planlı, kaplumbağa, usta)
 tools/old-bot.ts    Botun güçlendirilmeden önceki sürümü (karşılaştırma için)
+tools/feature-check.ts Çağ kartı, komutan ve Eter Kaynağı kurallarının testleri
 ```
 
 ## Denge testi

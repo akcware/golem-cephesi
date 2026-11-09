@@ -2,6 +2,7 @@
 import Phaser from 'phaser';
 import * as B from '../../shared/balance';
 import { drawCastle } from './castles';
+import { drawCape, drawCrown, drawSource } from './commander';
 import { drawParticle, drawProj, drawSlot, drawSpecial, drawTurretProj } from './fx';
 import { type Team } from './layout';
 import { drawTurret } from './turrets';
@@ -16,6 +17,9 @@ export const artKeys = {
   proj: (t: number) => `proj_${t}`,
   tproj: (t: number, g: number) => `tproj_${t}_${g}`,
   spec: (t: number) => `spec_${t}`,
+  cape: (t: number, team: Team) => `cape_${t}_${team}`,
+  crown: (t: number) => `crown_${t}`,
+  source: () => 'ether_src',
 };
 
 /**
@@ -46,6 +50,8 @@ export function generateArt(scene: Phaser.Scene) {
       put(scene, K.leg(t, arch), drawLeg(t, arch));
       put(scene, K.weapon(t, arch), drawWeapon(t, arch));
     }
+    for (const team of ['a', 'e'] as Team[]) put(scene, K.cape(t, team), drawCape(t, team));
+    put(scene, K.crown(t), drawCrown(t));
     lap('units');
     const castles = drawCastle(t);
     put(scene, K.castle(t, 'a'), castles.a);
@@ -61,6 +67,7 @@ export function generateArt(scene: Phaser.Scene) {
     lap('fx');
   }
   put(scene, 'slot', drawSlot());
+  put(scene, K.source(), drawSource());
   for (const k of ['px', 'dot', 'soft', 'ring'] as const) put(scene, k, drawParticle(k));
   lap('fx');
 }

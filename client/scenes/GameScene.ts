@@ -4,9 +4,12 @@ import Phaser from 'phaser';
 import type { Room } from '@colyseus/sdk';
 import * as B from '../../shared/balance';
 import type { Arch } from '../../shared/balance';
-import { STATUS_AURA, STATUS_BURN, STATUS_SLOW, type FxEvent, type IBattleState, type IUnit } from '../../shared/protocol';
+import { STATUS_AURA, STATUS_BURN, STATUS_FURY, STATUS_SLOW, STATUS_STUN, type FxEvent, type IBattleState, type IUnit } from '../../shared/protocol';
 import {
   ART_SCALE,
+  CAPE_BOX,
+  CROWN_BOX,
+  SOURCE_H,
   CASTLE_H,
   CASTLE_W,
   GROUND_Y,
@@ -50,7 +53,21 @@ interface UnitView {
   swingDur: number;
   flashing: boolean;
   status: number;
+  /** komutan ekleri */
+  cmd: boolean;
+  cape?: Phaser.GameObjects.Image;
+  crown?: Phaser.GameObjects.Image;
+  lvlText?: Phaser.GameObjects.Text;
+  lvl: number;
+  scale: number;
 }
+
+/** Komutan sıradan golemden bu kadar büyük görünür. */
+const CMD_SCALE = 1.3;
+/** Eter Kaynağı türlerinin rengi. */
+const SOURCE_TINT: Record<string, number> = { gold: 0xffd34d, fury: 0xff6a3d, heal: 0x7dff9a };
+/** Eter Kaynağı ölçeği. */
+const SRC_SCALE = 1.35;
 
 interface Proj {
   img: Phaser.GameObjects.Image;
@@ -103,6 +120,7 @@ export class GameScene extends Phaser.Scene {
 
   private rally!: Phaser.GameObjects.Container;
   private ops: OutpostView[] = [];
+  private src!: { c: Phaser.GameObjects.Container; img: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image; icon: Phaser.GameObjects.Text; zone: Phaser.GameObjects.Ellipse; bar: Phaser.GameObjects.Graphics; kind: string; lastBar: string };
   private chunks: Emitter[] = [];
   private glows: Emitter[] = [];
   private spark!: Emitter;
@@ -128,6 +146,7 @@ export class GameScene extends Phaser.Scene {
     this.buildCastles();
     this.buildOutposts();
     this.resetOutposts();
+    this.buildSource();
     this.buildRally();
     this.buildEmitters();
     this.setupInput();
@@ -169,6 +188,7 @@ export class GameScene extends Phaser.Scene {
     this.room = undefined;
     this.clearViews();
     this.rally.setVisible(false);
+    this.src.c.setVisible(false);
     this.resetOutposts();
     for (let ci = 0; ci < 2; ci++) {
       this.castles[ci].setTexture(keys.castle(0, ci === 0 ? 'a' : 'e'));
@@ -201,6 +221,31 @@ export class GameScene extends Phaser.Scene {
       const x = this.sx(fx.x);
       for (let i = 0; i < 14; i++) this.healFx.explode(1, x + (Math.random() * 2 - 1) * fx.r, GROUND_Y - 10 - Math.random() * 30);
       this.floatText(x, GROUND_Y - 70, 'İyileştirme', '#8dff9a');
+    } else if (fx.t === 'cmd') {
+      this.cmdFx(fx);
+    } else if (fx.t === 'src') {
+      const x = this.sx(fx.x);
+      const tint = SOURCE_TINT[fx.kind] ?? 0xffffff;
+      const ring = this.add.image(x, GROUND_Y - 50, 'ring').setTint(tint).setBlendMode(Phaser.BlendModes.ADD).setDepth(970).setScale(0.3);
+      this.tweens.add({ targets: ring, scale: 4, alpha: 0, duration: 700, ease: 'Cubic.easeOut', onComplete: () => ring.destroy() });
+      this.glows[4].explode(fx.k === 'taken' ? 40 : 20, x, GROUND_Y - 60);
+      if (fx.k === 'taken') {
+        const info = B.SOURCE_KINDS[fx.kind as B.SourceKind];
+        const mine = fx.side === this.mySide;
+        this.floatText(x, GROUND_Y - 150, `${info?.icon ?? ''} ${info?.name ?? ''}`, mine ? '#9fffb0' : '#ff9a9a');
+        if (mine && fx.kind === 'heal') {
+          for (let i = 0; i < 30; i++) this.healFx.explode(1, Phaser.Math.Between(-100, B.WORLD_W + 100), GROUND_Y - 10 - Math.random() * 40);
+        }
+      }
+      if (this.onScreen(x)) sfx.evolve();
+    } else if (fx.t === 'bounce') {
+      // Seken Atış: iki düşman arasında kısa bir kıvılcım
+      const a = this.views.get(fx.from);
+      const b = this.views.get(fx.to);
+      if (a && b) {
+        const glow = B.TIERS[fx.tier]?.palette.glow ?? 0xffffff;
+        this.lightningFx([{ x: a.c.x, y: a.c.y - a.height * 0.5 }, { x: b.c.x, y: b.c.y - b.height * 0.5 }], glow);
+      }
     } else if (fx.t === 'ufx') {
       const v = this.views.get(fx.id);
       if (!v) return;
@@ -226,7 +271,92 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /** Komutan olayları: doğuş, Sarsıcı Darbe (atılış + yere iniş), seviye, ölüm. */
+  private cmdFx(fx: Extract<FxEvent, { t: 'cmd' }>) {
+    const v = this.views.get(fx.id);
+    const x = v ? v.c.x : this.sx(fx.x);
+    const mine = fx.side === this.mySide;
+    const y = GROUND_Y - 40;
+    if (fx.k === 'spawn') {
+      this.glows[v?.tier ?? 0].explode(18, x, y);
+      if (mine) this.floatText(x, GROUND_Y - 110, 'Komutan sahada!', '#ffe08a');
+    } else if (fx.k === 'leap') {
+      // zıplama: konum sunucudan gelir, burada sadece yükselip inme
+      if (v) {
+        v.c.x = this.sx(fx.x) - v.dir * 40; // havada ilerlesin
+        this.tweens.add({ targets: v.c, y: v.c.y - 46, duration: (B.CMD_LAND * 1000) / 2, yoyo: true, ease: 'Quad.easeOut' });
+      }
+      this.smoke.explode(4, x, GROUND_Y - 6);
+      if (this.onScreen(x)) sfx.special();
+    } else if (fx.k === 'slam') {
+      const tint = 0xffd76a;
+      const ring = this.add.image(x, GROUND_Y - 8, 'ring').setTint(tint).setBlendMode(Phaser.BlendModes.ADD).setDepth(960).setScale(0.2, 0.08);
+      this.tweens.add({ targets: ring, scaleX: B.CMD_SLAM_R / 26, scaleY: B.CMD_SLAM_R / 70, alpha: 0, duration: 380, ease: 'Cubic.easeOut', onComplete: () => ring.destroy() });
+      this.chunks[v?.tier ?? 0].explode(14, x, GROUND_Y - 6);
+      this.smoke.explode(6, x, GROUND_Y - 6);
+      this.spark.explode(12, x, GROUND_Y - 20);
+      this.floatText(x, GROUND_Y - 120, B.CMD_SKILL_NAME + '!', mine ? '#ffe08a' : '#ff9a9a');
+      if (this.onScreen(x)) {
+        sfx.boom();
+        this.cameras.main.shake(140, 0.004);
+      }
+    } else if (fx.k === 'level') {
+      this.glows[v?.tier ?? 0].explode(24, x, y);
+      const ring = this.add.image(x, y, 'ring').setTint(0xffe08a).setBlendMode(Phaser.BlendModes.ADD).setDepth(970).setScale(0.2);
+      this.tweens.add({ targets: ring, scale: 2.4, alpha: 0, duration: 500, onComplete: () => ring.destroy() });
+      this.floatText(x, GROUND_Y - 120, `Seviye ${fx.lvl}!`, mine ? '#ffe08a' : '#ffb0b0');
+      if (mine) sfx.evolve();
+    } else if (fx.k === 'die') {
+      this.floatText(x, GROUND_Y - 110, mine ? 'Komutanın düştü!' : 'Rakip komutan düştü!', mine ? '#ff9a9a' : '#ffe08a');
+    }
+  }
+
   // ── kurulum ──────────────────────────────────────────────
+  private buildSource() {
+    const glow = this.add.image(0, -56 * SRC_SCALE, 'soft').setBlendMode(Phaser.BlendModes.ADD).setScale(6.5).setAlpha(0.55);
+    const img = this.add.image(0, 6, keys.source()).setOrigin(0.5, 1).setScale(SRC_SCALE / ART_SCALE);
+    const zone = this.add.ellipse(0, 4, B.SOURCE_RADIUS * 2, 18, 0xffffff, 0.12).setStrokeStyle(2, 0xffffff, 0.35);
+    const icon = this.add
+      .text(0, -SOURCE_H * SRC_SCALE - 6, '', { fontFamily: 'Fredoka, sans-serif', fontSize: '26px', stroke: '#1a1a24', strokeThickness: 5 })
+      .setOrigin(0.5, 1);
+    const bar = this.add.graphics();
+    const c = this.add.container(0, GROUND_Y, [zone, glow, img, icon, bar]).setDepth(GROUND_Y - 21).setVisible(false);
+    this.tweens.add({ targets: img, y: { from: 6, to: 0 }, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.tweens.add({ targets: glow, alpha: { from: 0.35, to: 0.7 }, duration: 900, yoyo: true, repeat: -1 });
+    this.src = { c, img, glow, icon, zone, bar, kind: '', lastBar: '' };
+  }
+
+  private syncSource(st: IBattleState) {
+    const s = st.src;
+    const v = this.src;
+    const active = !!s?.active && st.phase === 'playing';
+    v.c.setVisible(active);
+    if (!active || !s) return;
+    v.c.x = this.sx(s.x);
+    if (v.kind !== s.kind) {
+      v.kind = s.kind;
+      const tint = SOURCE_TINT[s.kind] ?? 0xffffff;
+      v.img.setTint(tint, tint, 0xffffff, 0xffffff);
+      v.glow.setTint(tint);
+      v.zone.setFillStyle(tint, 0.12).setStrokeStyle(2, tint, 0.45);
+      v.icon.setText(B.SOURCE_KINDS[s.kind as B.SourceKind]?.icon ?? '');
+    }
+    const key = `${s.capSide}:${s.cap.toFixed(2)}`;
+    if (key !== v.lastBar) {
+      v.lastBar = key;
+      const g = v.bar;
+      g.clear();
+      if (s.cap > 0) {
+        const w = 70;
+        const y = -SOURCE_H * SRC_SCALE - 2;
+        g.fillStyle(0x000000, 0.55);
+        g.fillRoundedRect(-w / 2 - 2, y - 2, w + 4, 10, 4);
+        g.fillStyle(s.capSide === this.mySide ? TEAM.a : TEAM.e, 1);
+        g.fillRoundedRect(-w / 2, y, w * s.cap, 6, 3);
+      }
+    }
+  }
+
   private buildCastles() {
     for (let ci = 0; ci < 2; ci++) {
       const team: Team = ci === 0 ? 'a' : 'e';
@@ -541,6 +671,7 @@ export class GameScene extends Phaser.Scene {
     if (!st || !st.players || !st.units) return;
     this.syncPlayers(st);
     this.syncOutposts(st);
+    this.syncSource(st);
     this.syncUnits(st, dt, time);
   }
 
@@ -659,9 +790,31 @@ export class GameScene extends Phaser.Scene {
       .setRotation(W.rot)
       .setScale(s);
     const hp = this.add.graphics();
-    c.add([aura, shadow, legB, legF, body, weapon, hp]);
-    c.setScale(dir, 1);
-    c.setDepth(y + (arch === 'heavy' ? 0 : 0.5));
+    const cmd = !!u.cmd;
+    const scale = cmd ? CMD_SCALE : 1;
+    let cape: Phaser.GameObjects.Image | undefined;
+    let crown: Phaser.GameObjects.Image | undefined;
+    let lvlText: Phaser.GameObjects.Text | undefined;
+    if (cmd) {
+      // komutan: pelerin gövdenin arkasında, taç başın üstünde, ayak altında altın halka
+      cape = this.add
+        .image(CAPE_BOX[0], CAPE_BOX[1], keys.cape(u.tier, team))
+        .setOrigin(0, 0)
+        .setScale(s);
+      crown = this.add
+        .image(CROWN_BOX[0], CROWN_BOX[1], keys.crown(u.tier))
+        .setOrigin(0, 0)
+        .setScale(s);
+      lvlText = this.add
+        .text(0, -L.bodyH - 26, '', { fontFamily: 'Fredoka, sans-serif', fontSize: '13px', fontStyle: '700', color: '#ffe08a', stroke: '#1a1a24', strokeThickness: 4 })
+        .setOrigin(0.5, 1);
+      aura.setFillStyle(0xffd76a, 0.4).setVisible(true);
+      c.add([aura, shadow, cape, legB, legF, body, crown, weapon, hp, lvlText]);
+    } else {
+      c.add([aura, shadow, legB, legF, body, weapon, hp]);
+    }
+    c.setScale(dir * scale, scale);
+    c.setDepth(y + (arch === 'heavy' ? 0 : 0.5) + (cmd ? 0.3 : 0));
     c.setAlpha(0);
     this.tweens.add({ targets: c, alpha: 1, duration: 250 });
     if (ally) sfx.spawn();
@@ -688,9 +841,28 @@ export class GameScene extends Phaser.Scene {
       swingDur: 0.3,
       flashing: false,
       status: 0,
+      cmd,
+      cape,
+      crown,
+      lvlText,
+      lvl: 0,
+      scale,
     };
     this.drawHp(v, u);
     return v;
+  }
+
+  /** Komutan çağ atlayınca dokularını yeniler. */
+  private retexture(v: UnitView, tier: number) {
+    const team: Team = v.ally ? 'a' : 'e';
+    v.tier = tier;
+    v.body.setTexture(keys.body(tier, v.arch, team));
+    v.legB.setTexture(keys.leg(tier, v.arch));
+    v.legF.setTexture(keys.leg(tier, v.arch));
+    v.weapon.setTexture(keys.weapon(tier, v.arch));
+    v.cape?.setTexture(keys.cape(tier, team));
+    v.crown?.setTexture(keys.crown(tier));
+    this.glows[tier].explode(20, v.c.x, v.c.y - v.height * 0.6);
   }
 
   private syncView(v: UnitView, u: IUnit, dt: number, time: number) {
@@ -699,8 +871,20 @@ export class GameScene extends Phaser.Scene {
     v.c.x = Math.abs(diff) > 120 ? tx : v.c.x + diff * Math.min(1, dt * 12);
 
     // geri çekilirken arkasını dönüp yürür
-    const face = u.state === 3 ? -v.dir : v.dir;
+    const face = (u.state === 3 ? -v.dir : v.dir) * v.scale;
     if (v.c.scaleX !== face) v.c.scaleX = face;
+    if (v.cmd) {
+      if (u.tier !== v.tier) this.retexture(v, u.tier);
+      if (v.lvlText) {
+        if (u.lvl !== v.lvl) {
+          v.lvl = u.lvl;
+          v.lvlText.setText(`Sv${u.lvl}`);
+        }
+        // yazı ayna dönmesin
+        v.lvlText.scaleX = Math.sign(face) / v.scale;
+        v.lvlText.scaleY = 1 / v.scale;
+      }
+    }
     const moving = u.state === 0 || u.state === 3;
     if (moving) v.walkT += dt * (v.arch === 'heavy' ? 7 : 11);
     const s = Math.sin(v.walkT);
@@ -739,10 +923,19 @@ export class GameScene extends Phaser.Scene {
     if (status !== v.status) {
       v.status = status;
       if (!v.flashing) this.applyTint(v);
-      v.aura.setVisible((status & STATUS_AURA) !== 0);
+      // ayak altı parıltısı: öfke kırmızı, aura altın; komutanda hep var
+      const fury = (status & STATUS_FURY) !== 0;
+      v.aura.setFillStyle(fury ? 0xff5a2a : 0xffd76a, 0.45);
+      v.aura.setVisible(v.cmd || fury || (status & STATUS_AURA) !== 0);
     }
-    if (status & STATUS_AURA) v.aura.setAlpha(0.3 + Math.sin(time * 0.006 + v.phase) * 0.15);
+    if (v.aura.visible) v.aura.setAlpha(0.3 + Math.sin(time * 0.006 + v.phase) * 0.15);
     if (status & STATUS_BURN && Math.random() < dt * 8) this.flame.explode(1, v.c.x, v.c.y - v.height * 0.4);
+    // sersemlemiş: başının üstünde dönen yıldızlar
+    if (status & STATUS_STUN && Math.random() < dt * 10) {
+      const a = time * 0.012 + v.phase;
+      this.spark.explode(1, v.c.x + Math.cos(a) * 10, v.c.y - v.height * v.scale - 8 + Math.sin(a) * 3);
+    }
+    if (status & STATUS_FURY && Math.random() < dt * 3) this.flame.explode(1, v.c.x, v.c.y - 6);
   }
 
   private swingPose(arch: Arch, rest: number, p: number): number {
@@ -834,7 +1027,7 @@ export class GameScene extends Phaser.Scene {
   private flashView(v: UnitView) {
     if (v.flashing) return;
     v.flashing = true;
-    for (const img of [v.body, v.weapon, v.legB, v.legF]) img.setTintFill(0xffffff);
+    for (const img of [v.body, v.weapon, v.legB, v.legF, ...(v.cape ? [v.cape] : []), ...(v.crown ? [v.crown] : [])]) img.setTintFill(0xffffff);
     this.time.delayedCall(70, () => {
       v.flashing = false;
       if (!v.c.active) return;
@@ -844,8 +1037,8 @@ export class GameScene extends Phaser.Scene {
 
   /** Durum rengi: buzla yavaşlayan birim mavimsi, yanan birim turuncumsu görünür. */
   private applyTint(v: UnitView) {
-    const tint = v.status & STATUS_SLOW ? 0x9fd8ff : v.status & STATUS_BURN ? 0xffa36b : -1;
-    for (const img of [v.body, v.weapon, v.legF]) {
+    const tint = v.status & STATUS_STUN ? 0xc8c8c8 : v.status & STATUS_SLOW ? 0x9fd8ff : v.status & STATUS_BURN ? 0xffa36b : -1;
+    for (const img of [v.body, v.weapon, v.legF, ...(v.cape ? [v.cape] : []), ...(v.crown ? [v.crown] : [])]) {
       if (tint < 0) img.clearTint();
       else img.setTint(tint);
     }
@@ -855,8 +1048,8 @@ export class GameScene extends Phaser.Scene {
   private drawHp(v: UnitView, u: IUnit) {
     const g = v.hp;
     g.clear();
-    if (u.hp >= u.maxHp - 0.01) return;
-    const w = v.arch === 'heavy' ? 42 : 26;
+    if (u.hp >= u.maxHp - 0.01 && !v.cmd) return; // komutanın can çubuğu hep görünür
+    const w = v.cmd ? 34 : v.arch === 'heavy' ? 42 : 26;
     const y = -v.height - 9;
     const f = Phaser.Math.Clamp(u.hp / u.maxHp, 0, 1);
     g.fillStyle(0x000000, 0.55);
@@ -872,12 +1065,13 @@ export class GameScene extends Phaser.Scene {
     }
     const x = v.c.x;
     const y = v.c.y - v.height * 0.4;
-    this.chunks[v.tier].explode(v.arch === 'heavy' ? 18 : 10, x, y);
+    this.chunks[v.tier].explode(v.arch === 'heavy' || v.cmd ? 18 : 10, x, y);
     this.smoke.explode(3, x, v.c.y - 10);
     const visible = this.onScreen(x);
     if (visible) sfx.death();
     if (!v.ally) {
-      this.floatText(x, v.c.y - v.height - 14, `+${B.unitDef(v.tier, v.arch).bounty}`, '#ffd34d');
+      const bounty = v.cmd ? B.commanderDef(v.tier, 1).bounty : B.unitDef(v.tier, v.arch).bounty;
+      this.floatText(x, v.c.y - v.height - 14, `+${bounty}`, '#ffd34d');
       if (visible) sfx.coin();
     }
     v.hp.clear();

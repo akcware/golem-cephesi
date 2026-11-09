@@ -20,6 +20,10 @@ export interface ClientMessages {
   slot_buy: Record<string, never>;
   /** Sahip olunan noktaya (silahsız) karakol kurar; kuruluysa kademesini yükseltir, sonra üstüne kule ekler. */
   outpost_build: { index: number };
+  /** Sunulan çağ kartlarından birini seçer. */
+  card_pick: { id: string };
+  /** Komutanın yeteneği (Sarsıcı Darbe). */
+  cmd_skill: Record<string, never>;
   rematch: Record<string, never>;
 }
 
@@ -31,7 +35,16 @@ export interface JoinOptions {
 
 /** Sunucu → istemci görsel efekt olayları ('fx' mesajı) */
 export type FxEvent =
-  | { t: 'special'; side: number; tier: number; x0: number; x1: number }
+  /** echo: Çifte Yağmur kartının ikinci vuruşu */
+  | { t: 'special'; side: number; tier: number; x0: number; x1: number; echo?: boolean }
+  /** komutan: doğdu / atıldı (Sarsıcı Darbe) / yere indi / seviye atladı / öldü */
+  | { t: 'cmd'; side: number; k: 'spawn' | 'leap' | 'slam' | 'level' | 'die'; id: string; x: number; lvl?: number }
+  /** Eter Kaynağı: belirdi / alındı */
+  | { t: 'src'; k: 'spawn' | 'taken'; kind: string; x: number; side: number }
+  /** çağ kartı seçildi */
+  | { t: 'card'; side: number; id: string }
+  /** Seken Atış: kule atışı başka bir düşmana sekti */
+  | { t: 'bounce'; from: string; to: string; tier: number }
   | { t: 'evolve'; side: number; tier: number }
   | { t: 'end'; winner: number; reason: EndReason }
   /** birim yeteneği anı: kalkan blokladı / ruh dirildi / boğa hücumu */
@@ -53,6 +66,16 @@ export const STATUS_SLOW = 1;
 export const STATUS_BURN = 2;
 /** Eter Titanı aurasının etkisinde */
 export const STATUS_AURA = 4;
+/** Komutanın darbesiyle sersemledi */
+export const STATUS_STUN = 8;
+/** Eter Öfkesi etkisinde */
+export const STATUS_FURY = 16;
+
+export interface StrList {
+  length: number;
+  at(i: number): string | undefined;
+  forEach(cb: (v: string, i: number) => void): void;
+}
 
 export interface IPlayer {
   id: string;
@@ -66,7 +89,7 @@ export interface IPlayer {
   tier: number;
   baseHp: number;
   baseMaxHp: number;
-  queue: { length: number; at(i: number): string | undefined; forEach(cb: (v: string, i: number) => void): void };
+  queue: StrList;
   trainProgress: number;
   specialCd: number;
   turrets: { length: number; at(i: number): ITurretSlot | undefined };
@@ -76,6 +99,24 @@ export interface IPlayer {
   lost: number;
   trained: number;
   goldEarned: number;
+  cards: StrList;
+  offer: StrList;
+  picks: number;
+  furyT: number;
+  cmdId: string;
+  cmdRespawn: number;
+  cmdCd: number;
+  cmdLvl: number;
+  cmdKills: number;
+}
+
+export interface ISource {
+  active: boolean;
+  x: number;
+  kind: string;
+  cap: number;
+  capSide: number;
+  next: number;
 }
 
 export interface IUnit {
@@ -89,7 +130,9 @@ export interface IUnit {
   state: number; // 0 yürüyor, 1 bekliyor, 2 saldırıyor, 3 geri çekiliyor
   atk: number;
   tgt: string;
-  status: number; // STATUS_SLOW | STATUS_BURN bitleri
+  status: number; // STATUS_* bitleri
+  cmd: boolean; // komutan mı
+  lvl: number; // komutan seviyesi
 }
 
 export interface IOutpost {
@@ -124,4 +167,5 @@ export interface IBattleState {
   players: MapLike<IPlayer>;
   units: MapLike<IUnit>;
   outposts: { length: number; at(i: number): IOutpost | undefined };
+  src: ISource;
 }

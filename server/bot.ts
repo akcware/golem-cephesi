@@ -23,13 +23,19 @@ interface BotConfig {
   opFirst: boolean; // karakol işleri (kur → yükselt → kule ekle) birimlerden önce gelir
   opReserve: number; // karakol harcamasından sonra elde kalacak para (yakın dövüşçü sayısı)
   saveStop: boolean; // karakol için biriktirirken üretimi tamamen durdurur (ordu küçük değilse)
+  specialNeed: number; // özel güç için alandaki en az düşman
+  cmdNeed: number; // komutan darbesi için önündeki en az düşman
+  openSpecial: boolean; // hücuma geçerken özel güçle açar
 }
 
 const CFG: Record<BotLevel, BotConfig> = {
-  easy: { think: 1.2, counter: 0.2, queue: 1, attackRatio: 0, defenseWeight: 0, maxTurrets: 1, maxGrade: 1, armOutposts: false, heavyShare: 0.1, retreatRatio: 0, opening: 0, opFirst: false, opReserve: 4, saveStop: false },
-  normal: { think: 0.6, counter: 0.65, queue: 2, attackRatio: 1.3, defenseWeight: 0.3, maxTurrets: 2, maxGrade: 2, armOutposts: true, heavyShare: 0.25, retreatRatio: 0.7, opening: 40, opFirst: true, opReserve: 1, saveStop: true },
-  hard: { think: 0.35, counter: 0.85, queue: 3, attackRatio: 1.05, defenseWeight: 0.4, maxTurrets: 3, maxGrade: 2, armOutposts: true, heavyShare: 0.28, retreatRatio: 0.7, opening: 40, opFirst: true, opReserve: 1, saveStop: true },
+  easy: { think: 1.2, counter: 0.2, queue: 1, attackRatio: 0, defenseWeight: 0, maxTurrets: 1, maxGrade: 1, armOutposts: false, heavyShare: 0.1, retreatRatio: 0, opening: 0, opFirst: false, opReserve: 4, saveStop: false, specialNeed: 6, cmdNeed: 4, openSpecial: false },
+  normal: { think: 0.9, counter: 0.45, queue: 2, attackRatio: 1.3, defenseWeight: 0.3, maxTurrets: 2, maxGrade: 2, armOutposts: false, heavyShare: 0.25, retreatRatio: 0.7, opening: 40, opFirst: true, opReserve: 1, saveStop: true, specialNeed: 5, cmdNeed: 3, openSpecial: false },
+  hard: { think: 0.6, counter: 0.65, queue: 2, attackRatio: 1.3, defenseWeight: 0.3, maxTurrets: 2, maxGrade: 2, armOutposts: true, heavyShare: 0.25, retreatRatio: 0.7, opening: 40, opFirst: true, opReserve: 1, saveStop: true, specialNeed: 5, cmdNeed: 3, openSpecial: false },
 };
+
+/** Normal/zor botun çağ kartı tercih sırası (baştaki daha çok tercih edilir). */
+const CARD_PREF = ['warcry', 'vital', 'loot', 'vein', 'foundry', 'alloy', 'banner', 'marksman', 'wisdom', 'distill', 'echo', 'lens', 'ricochet', 'masonry', 'rampart'];
 
 /** Ordunun kabaca gücü: kalan cana göre ağırlıklı maliyet. */
 function armyValue(units: Unit[]): number {
@@ -76,14 +82,16 @@ export class Bot {
     const distToBase = (u: Unit) => (u.x - myBase) * dir;
 
     sim.evolve(p);
+    if (p.picks > 0) this.pickCard();
 
     const own: Unit[] = [];
     const enemies: Unit[] = [];
     sim.state.units.forEach((u) => (u.side === p.side ? own : enemies).push(u));
     enemies.sort((a, b) => distToBase(a) - distToBase(b)); // kaleme en yakın düşman başta
     const mine = own.length;
+    const mods = sim.modsOf(p.side);
     const unitCost = B.unitDef(p.tier, 'melee').cost;
-    const heavyCost = B.unitDef(p.tier, 'heavy').cost;
+    const heavyCost = B.unitCost(p.tier, 'heavy', mods);
     const near = enemies.filter((u) => distToBase(u) < 650).length;
     const pressure = enemies.length > 0 && distToBase(enemies[0]) < 500;
 
@@ -109,17 +117,33 @@ export class Bot {
     if (cfg.attackRatio === 0 || sim.state.time < cfg.opening) {
       sim.setStance(p, 'attack');
     } else {
+      // Eter Kaynağı belirdiyse: ordumuz yeterince güçlüyse kaynağı almaya çık (bizim yarımızdaysa daha istekli)
+      const src = sim.state.src;
+      const srcNear = src.active && Math.abs(src.x - myBase) < B.WORLD_W / 2;
+      const forSource = src.active && mine >= 4 && myVal >= enVal * (srcNear ? 0.8 : 1);
       if (p.stance === 'hold') {
         const strong = mine >= 4 && myVal >= cfg.attackRatio * (enVal + cfg.defenseWeight * enemyDefense);
         const capped = mine >= B.MAX_UNITS_PER_SIDE - 2 || p.gold > heavyCost * 3;
-        if (strong || capped) {
+        if (strong || capped || forSource) {
           sim.setStance(p, 'attack');
           // hücumu özel güçle aç: önündeki düşmanları erit
-          if (this.level === 'hard' && p.specialCd <= 0 && enemies.length >= 3) sim.special(p);
+          if (cfg.openSpecial && p.specialCd <= 0 && enemies.length >= 3) sim.special(p);
         }
-      } else if (myVal < enVal * cfg.retreatRatio) {
+      } else if (myVal < enVal * cfg.retreatRatio && !(forSource && srcNear)) {
         sim.setStance(p, 'hold');
       }
+    }
+
+    // Komutan: önündeki kalabalığın üstüne Sarsıcı Darbe
+    const cmd = p.cmdId ? sim.state.units.get(p.cmdId) : undefined;
+    if (cmd && p.cmdCd <= 0) {
+      const ahead = enemies.filter((e) => {
+        const d = (e.x - cmd.x) * dir;
+        return d > -20 && d < B.CMD_LEAP + B.CMD_SLAM_R;
+      });
+      const need = cfg.cmdNeed;
+      const worth = ahead.length >= need || (this.level !== 'easy' && ahead.some((e) => e.cmd));
+      if (worth) sim.cmdSkill(p);
     }
 
     // 2) Özel güç: kaleye yaklaşan kalabalık, ya da en öndeki düşmanın arkasında yeterince birim varsa
@@ -129,7 +153,7 @@ export class Bot {
         const d = (u.x - front.x) * dir;
         return d >= -60 && d <= B.SPECIAL_WIDTH;
       }).length;
-      const need = this.level === 'easy' ? 6 : this.level === 'normal' ? 5 : 4;
+      const need = cfg.specialNeed;
       if (near >= 4 || inZone >= need || (p.stance === 'attack' && mine >= 6 && inZone >= 3)) sim.special(p);
     }
 
@@ -151,7 +175,9 @@ export class Bot {
     };
 
     // 3) Acil savunma: kaleye kalabalık geliyorsa biriktirdiği parayı kuleye yatırır (boş yuvaya kur, eskiyse yenile)
-    const want = Math.min(cfg.maxTurrets, p.tier === 0 ? 1 : p.tier < 3 ? 2 : 3);
+    // parası taşıyorsa (üretim hızı sınırına dayandıysa) bütün yuvalara kule
+    const rich = p.gold > heavyCost * 8;
+    const want = rich ? B.MAX_SLOTS : Math.min(cfg.maxTurrets, p.tier === 0 ? 1 : p.tier < 3 ? 2 : 3);
     if (near >= 3) {
       if (empty >= 0 && built < want) {
         const g = bestGrade(p.gold);
@@ -222,14 +248,36 @@ export class Bot {
     }
   }
 
+  /** Çağ kartı seçimi: kolay bot rastgele, diğerleri tercih sırasına göre. */
+  private pickCard() {
+    const { p, sim } = this;
+    const offer: string[] = [];
+    p.offer.forEach((id) => offer.push(id));
+    if (!offer.length) return;
+    let id = offer[Math.floor(Math.random() * offer.length)];
+    if (this.level !== 'easy') {
+      let best = Infinity;
+      for (const o of offer) {
+        const r = CARD_PREF.indexOf(o);
+        const rank = r < 0 ? 99 : r;
+        if (rank < best) {
+          best = rank;
+          id = o;
+        }
+      }
+    }
+    sim.cardPick(p, id);
+  }
+
   /** Üretilecek birim. null = şimdilik bekle (ağır golem için para biriktir). */
   private pickArch(enemies: Unit[], own: Unit[], pressure: boolean, siege: boolean): Arch | null {
     const p = this.p;
-    const cost = (a: Arch) => B.unitDef(p.tier, a).cost;
+    const mods = this.sim.modsOf(p.side);
+    const cost = (a: Arch) => B.unitCost(p.tier, a, mods);
 
-    // Kendi ordumuzun (sıradakiler dahil) bileşimi
+    // Kendi ordumuzun (sıradakiler dahil) bileşimi; komutan sayılmaz
     const n: Record<Arch, number> = { melee: 0, ranged: 0, heavy: 0 };
-    for (const u of own) n[u.arch as Arch]++;
+    for (const u of own) if (!u.cmd) n[u.arch as Arch]++;
     for (let i = 0; i < p.queue.length; i++) n[p.queue.at(i)!.split(':')[1] as Arch]++;
     const total = n.melee + n.ranged + n.heavy;
 

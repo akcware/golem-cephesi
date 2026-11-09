@@ -78,6 +78,8 @@ export class BattleRoom extends Room<{ state: BattleState }> {
     on('turret_buy', (p, m) => this.sim.turretBuy(p, Number(m.slot), Number(m.grade)));
     on('turret_sell', (p, m) => this.sim.turretSell(p, Number(m.slot)));
     on('turret_upgrade', (p, m) => this.sim.turretUpgrade(p, Number(m.slot), Number(m.grade)));
+    on('card_pick', (p, m) => this.sim.cardPick(p, m.id));
+    on('cmd_skill', (p) => this.sim.cmdSkill(p));
     // Test kolaylığı: sadece "npm run dev" ile başlatılan sunucuda (--dev) açık
     if (process.argv.includes('--dev')) {
       on('dev', (p, m) => this.sim.devGrant(p, Number(m.gold), Number(m.xp)));

@@ -17,6 +17,18 @@ interface SideCard {
   tier: HTMLElement;
   fill: HTMLElement;
   hpText: HTMLElement;
+  chips: HTMLElement;
+  chipKey: string;
+}
+
+/** Çağ kartı seçim tuşları. */
+const CARD_KEYS = ['z', 'x', 'c'];
+
+/** Oyuncunun seçtiği kartların simgeleri (bitiş ekranı). */
+function cardIcons(p: IPlayer): string {
+  const out: string[] = [];
+  p.cards?.forEach((id) => out.push(B.cardDef(id)?.icon ?? ''));
+  return out.join(' ') || '—';
 }
 
 export class Hud {
@@ -53,6 +65,16 @@ export class Hud {
   private evolveLabel!: HTMLElement;
   private evolveXp!: HTMLElement;
   private opEls: { btn: HTMLButtonElement; label: HTMLElement }[] = [];
+  private srcEl!: HTMLElement;
+  private furyEl!: HTMLElement;
+  private cmdBtn!: HTMLButtonElement;
+  private cmdImg!: HTMLImageElement;
+  private cmdFill!: HTMLElement;
+  private cmdLabel!: HTMLElement;
+  private cmdCdEl!: HTMLElement;
+  private offerEl!: HTMLElement;
+  private offerKey = '';
+  private lastSiege = false;
   private overlay!: HTMLElement;
   private banner!: HTMLElement;
   private muteBtn!: HTMLButtonElement;
@@ -75,8 +97,9 @@ export class Hud {
     const tier = h('span', { class: 'tier' });
     const fill = h('div', { class: 'fill' });
     const hpText = h('span', { class: 'hptext' });
-    const el = h('div', { class: `card side ${cls}` }, h('div', { class: 'row' }, name, tier), h('div', { class: 'hpbar' }, fill, hpText));
-    return { el, name, tier, fill, hpText };
+    const chips = h('div', { class: 'chips' });
+    const el = h('div', { class: `card side ${cls}` }, h('div', { class: 'row' }, name, tier), h('div', { class: 'hpbar' }, fill, hpText), chips);
+    return { el, name, tier, fill, hpText, chips, chipKey: '' };
   }
 
   private build() {
@@ -113,11 +136,15 @@ export class Hud {
       opsRow.append(btn);
     }
 
+    this.srcEl = h('div', {
+      class: 'srcinfo',
+      title: `Eter Kaynağı: ortanın bir yanında belirir. Alanında ${B.SOURCE_TIME} sn sadece senin birimlerin durursa ödül senin.`,
+    });
     const top = h(
       'div',
       { class: 'top' },
       this.me.el,
-      h('div', { class: 'center card' }, this.timerEl, this.minimap, opsRow),
+      h('div', { class: 'center card' }, this.timerEl, this.minimap, opsRow, this.srcEl),
       this.foe.el,
       h('div', { class: 'corner' }, this.muteBtn, leaveBtn),
     );
@@ -125,7 +152,8 @@ export class Hud {
     this.goldEl = h('b', { text: '0' });
     this.incomeEl = h('small');
     this.countEl = h('span', { class: 'count' });
-    const res = h('div', { class: 'res card' }, h('span', { class: 'coin' }), this.goldEl, this.incomeEl, this.countEl);
+    this.furyEl = h('span', { class: 'fury hidden', title: B.SOURCE_KINDS.fury.desc });
+    const res = h('div', { class: 'res card' }, h('span', { class: 'coin' }), this.goldEl, this.incomeEl, this.countEl, this.furyEl);
 
     // birim butonları
     const units = h('div', { class: 'group units' });
@@ -183,6 +211,25 @@ export class Hud {
       h('kbd', { text: 'S' }),
     );
 
+    // komutan (Sarsıcı Darbe)
+    this.cmdImg = h('img', { alt: '' });
+    this.cmdFill = h('div', { class: 'cfill' });
+    this.cmdLabel = h('span', { class: 'clabel' });
+    this.cmdCdEl = h('div', { class: 'cd' });
+    this.cmdBtn = h(
+      'button',
+      {
+        class: 'cmdbtn',
+        title: `${B.CMD_SKILL_NAME}: komutan öndeki düşmanların üstüne atılır, çevresine büyük hasar verip onları sersemletir (R). Komutan öldürdükçe seviye atlar; ölürse ${B.CMD_RESPAWN} sn sonra döner.`,
+        onclick: () => this.send('cmd_skill'),
+      },
+      this.cmdImg,
+      this.cmdCdEl,
+      h('div', { class: 'chp' }, this.cmdFill),
+      this.cmdLabel,
+      h('kbd', { text: 'R' }),
+    );
+
     // özel güç
     this.specialImg = h('img', { alt: '' });
     this.specialCd = h('div', { class: 'cd' });
@@ -215,12 +262,64 @@ export class Hud {
       units,
       queue,
       slots,
-      h('div', { class: 'group actions' }, this.stanceBtn, this.specialBtn, this.evolveBtn),
+      h('div', { class: 'group actions' }, this.stanceBtn, this.cmdBtn, this.specialBtn, this.evolveBtn),
     );
+
+    // çağ kartı seçimi (kademe atlayınca belirir)
+    this.offerEl = h('div', { class: 'offer hidden' });
 
     this.overlay = h('div', { class: 'overlay hidden' });
     this.banner = h('div', { class: 'banner' });
-    this.el.append(top, res, bottom, this.overlay, this.banner);
+    this.el.append(top, res, bottom, this.offerEl, this.overlay, this.banner);
+  }
+
+  /** Sunulan kartları çizer (sadece sunum değişince). */
+  private renderOffer(me: IPlayer, playing: boolean) {
+    const ids: string[] = [];
+    if (me.picks > 0) me.offer?.forEach((id) => ids.push(id));
+    const key = playing ? ids.join(',') : '';
+    if (key === this.offerKey) return;
+    this.offerKey = key;
+    this.offerEl.innerHTML = '';
+    setClass(this.offerEl, 'hidden', !key);
+    if (!key) return;
+    this.offerEl.append(h('div', { class: 'otitle', text: `Çağ kartı seç${me.picks > 1 ? ` (${me.picks} hak)` : ''}` }));
+    const row = h('div', { class: 'orow' });
+    ids.forEach((id, i) => {
+      const c = B.cardDef(id);
+      if (!c) return;
+      row.append(
+        h(
+          'button',
+          { class: `cardopt cat-${c.cat === 'güç' ? 'guc' : c.cat}`, onclick: () => this.pickCard(id) },
+          h('span', { class: 'cicon', text: c.icon }),
+          h('b', { class: 'cname', text: c.name }),
+          h('span', { class: 'cdesc', text: c.desc }),
+          h('span', { class: 'ccat', text: c.cat }),
+          h('kbd', { text: CARD_KEYS[i].toUpperCase() }),
+        ),
+      );
+    });
+    this.offerEl.append(row);
+    sfx.evolve();
+  }
+
+  private pickCard(id: string) {
+    this.send('card_pick', { id });
+  }
+
+  /** Oyuncunun seçtiği kartlar: küçük rozetler (üzerine gelince açıklama). */
+  private renderChips(card: SideCard, p: IPlayer) {
+    const ids: string[] = [];
+    p.cards?.forEach((id) => ids.push(id));
+    const key = ids.join(',');
+    if (key === card.chipKey) return;
+    card.chipKey = key;
+    card.chips.innerHTML = '';
+    for (const id of ids) {
+      const c = B.cardDef(id);
+      if (c) card.chips.append(h('span', { class: 'chip', text: c.icon, title: `${c.name}: ${c.desc}` }));
+    }
   }
 
   // ── bağlama ──────────────────────────────────────────────
@@ -231,6 +330,10 @@ export class Hud {
     this.lastPhase = '';
     this.lastCount = -1;
     this.lastOverlayKey = '';
+    this.offerKey = '';
+    this.lastSiege = false;
+    this.me.chipKey = '';
+    this.foe.chipKey = '';
     this.el.classList.remove('hidden');
     this.update();
     this.interval = window.setInterval(() => this.update(), 100);
@@ -248,6 +351,8 @@ export class Hud {
     this.room = undefined;
     this.el.classList.add('hidden');
     this.overlay.classList.add('hidden');
+    this.offerEl.classList.add('hidden');
+    this.offerKey = '';
   }
 
   onFx(fx: FxEvent) {
@@ -262,6 +367,19 @@ export class Hud {
       else if (fx.k === 'lost' && mine) this.showBanner('Bir noktayı kaybettin', 'warn');
       else if (fx.k === 'destroyed') this.showBanner(mine ? 'Karakolun yıkıldı!' : 'Rakip karakolunu yıktın!', mine ? 'warn' : 'good');
       else if (fx.k === 'built' && mine) sfx.evolve();
+    } else if (fx.t === 'src') {
+      const info = B.SOURCE_KINDS[fx.kind as B.SourceKind];
+      if (!info) return;
+      if (fx.k === 'spawn') this.showBanner(`Eter Kaynağı belirdi: ${info.icon} ${info.name}`, 'good');
+      else if (fx.side === this.side) this.showBanner(`Kaynak senin! ${info.icon} ${info.name}`, 'good');
+      else this.showBanner(`Rakip kaynağı aldı: ${info.icon} ${info.name}`, 'warn');
+    } else if (fx.t === 'card' && fx.side !== this.side) {
+      const c = B.cardDef(fx.id);
+      if (c) this.showBanner(`Rakip kart seçti: ${c.icon} ${c.name}`, 'warn');
+    } else if (fx.t === 'cmd') {
+      const mine = fx.side === this.side;
+      if (fx.k === 'die') this.showBanner(mine ? `Komutanın düştü! ${B.CMD_RESPAWN} sn sonra döner` : 'Rakip komutanı düşürdün!', mine ? 'warn' : 'good');
+      else if (fx.k === 'level' && mine) this.showBanner(`Komutan seviye ${fx.lvl}!`, 'good');
     }
   }
 
@@ -297,6 +415,12 @@ export class Hud {
     else if (k === 't') this.quickTurret();
     else if (k === 's') this.toggleStance();
     else if (k === 'k') this.quickOutpost();
+    else if (k === 'r') this.send('cmd_skill');
+    else if (CARD_KEYS.includes(k)) {
+      const me = this.state()?.me;
+      const id = me && me.picks > 0 ? me.offer?.at(CARD_KEYS.indexOf(k)) : undefined;
+      if (id) this.pickCard(id);
+    }
   }
 
   /** Ekrandaki sıra (0 = bana en yakın) → dünyadaki nokta indeksi. */
@@ -491,18 +615,51 @@ export class Hud {
 
     // üst kartlar
     this.fillCard(this.me, me);
-    if (foe) this.fillCard(this.foe, foe);
-    else {
+    this.renderChips(this.me, me);
+    if (foe) {
+      this.fillCard(this.foe, foe);
+      this.renderChips(this.foe, foe);
+    } else {
       setText(this.foe.name, '—');
       setText(this.foe.tier, '');
     }
-    setText(this.timerEl, fmtTime(st.time));
+    const mods = B.cardMods(me.cards);
+    // süre + Yıkım Saati
+    const siege = st.time > B.SIEGE_TIME;
+    if (siege) {
+      setText(this.timerEl, `${fmtTime(st.time)} · ⚠ Yıkım ×${B.siegeMult(st.time).toFixed(1)}`);
+      this.timerEl.title = 'Yıkım Saati: kaleler ve karakollar her saniye canlarının bir kısmını kaybeder, yapılara verilen hasar her dakika artar.';
+    } else {
+      const left = B.SIEGE_TIME - st.time;
+      setText(this.timerEl, left < 60 && st.phase === 'playing' ? `${fmtTime(st.time)} · Yıkım ${Math.ceil(left)} sn` : fmtTime(st.time));
+      this.timerEl.title = `${fmtTime(B.SIEGE_TIME)} sonra Yıkım Saati başlar: maç uzarsa kaleler çökmeye başlar.`;
+    }
+    setClass(this.timerEl, 'siege', siege || B.SIEGE_TIME - st.time < 60);
+    if (siege && !this.lastSiege && st.phase === 'playing') this.showBanner('⚠ Yıkım Saati başladı: kaleler çöküyor!', 'warn');
+    this.lastSiege = siege;
+    // Eter Kaynağı
+    const src = st.src;
+    if (src && st.phase === 'playing') {
+      if (src.active) {
+        const info = B.SOURCE_KINDS[src.kind as B.SourceKind];
+        const who = src.cap > 0 ? (src.capSide === this.side ? ` · senin %${Math.round(src.cap * 100)}` : ` · rakip %${Math.round(src.cap * 100)}`) : '';
+        setText(this.srcEl, `${info?.icon ?? ''} ${info?.name ?? ''}${who}`);
+        this.srcEl.dataset.state = src.cap > 0 ? (src.capSide === this.side ? 'mine' : 'foe') : 'open';
+        this.srcEl.title = `${info?.name}: ${info?.desc}. Alanında ${B.SOURCE_TIME} sn sadece senin birimlerin durursa ödül senin.`;
+      } else {
+        setText(this.srcEl, `Eter Kaynağı ${fmtTime(src.next)}`);
+        this.srcEl.dataset.state = 'wait';
+      }
+    } else setText(this.srcEl, '');
+    setClass(this.furyEl, 'hidden', !(me.furyT > 0));
+    if (me.furyT > 0) setText(this.furyEl, `🔥 Öfke ${Math.ceil(me.furyT)}`);
+    this.renderOffer(me, playing);
 
     // kaynaklar
     const gold = me.gold;
     let ownedOps = 0;
     for (let i = 0; i < (st.outposts?.length ?? 0); i++) if (st.outposts.at(i)!.owner === this.side) ownedOps++;
-    const income = B.TIERS[me.tier].income * (1 + ownedOps * B.OUTPOST_INCOME);
+    const income = B.TIERS[me.tier].income * (1 + ownedOps * B.OUTPOST_INCOME) * mods.income;
     setText(this.goldEl, fmtNum(gold));
     setText(this.incomeEl, `+${Math.round(income * 10) / 10}/sn`);
 
@@ -557,10 +714,32 @@ export class Hud {
     // birim butonları
     const queueFull = me.queue.length >= B.MAX_QUEUE;
     for (const arch of B.ARCHES) {
-      const def = B.unitDef(me.tier, arch);
+      const cost = B.unitCost(me.tier, arch, mods);
       const ub = this.unitBtns[arch];
-      ub.btn.disabled = !playing || gold < def.cost || queueFull;
+      setText(ub.cost, String(cost));
+      ub.btn.disabled = !playing || gold < cost || queueFull;
     }
+
+    // komutan
+    const cmdAlive = !!me.cmdId && st.units.get(me.cmdId);
+    const cmdSrc = this.icons.commanders[me.tier];
+    if (this.cmdImg.getAttribute('src') !== cmdSrc) this.cmdImg.src = cmdSrc;
+    if (cmdAlive) {
+      const u = cmdAlive;
+      this.cmdFill.style.width = `${Math.max(0, Math.min(1, u.hp / u.maxHp)) * 100}%`;
+      setText(this.cmdLabel, `Komutan Sv${me.cmdLvl}`);
+    } else {
+      this.cmdFill.style.width = '0%';
+      setText(this.cmdLabel, st.phase === 'playing' ? `Döner: ${Math.ceil(me.cmdRespawn)}` : 'Komutan');
+    }
+    const ccd = me.cmdCd;
+    const cmax = B.CMD_SKILL_CD * mods.cmdCd;
+    this.cmdCdEl.style.background = ccd > 0 ? `conic-gradient(rgba(10,14,28,.78) ${Math.min(1, ccd / cmax) * 360}deg, transparent 0deg)` : 'transparent';
+    setText(this.cmdCdEl, ccd > 0 && cmdAlive ? String(Math.ceil(ccd)) : '');
+    const cmdReady = playing && !!cmdAlive && ccd <= 0;
+    this.cmdBtn.disabled = !cmdReady;
+    setClass(this.cmdBtn, 'ready', cmdReady && enemies > 0);
+    setClass(this.cmdBtn, 'dead', !cmdAlive);
 
     // kuyruk
     for (let i = 0; i < B.MAX_QUEUE; i++) {
@@ -630,7 +809,7 @@ export class Hud {
 
     // özel güç
     const cd = me.specialCd;
-    const frac = cd > 0 ? cd / B.SPECIAL_CD : 0;
+    const frac = cd > 0 ? Math.min(1, cd / (B.SPECIAL_CD * mods.specialCd)) : 0;
     this.specialCd.style.background =
       cd > 0 ? `conic-gradient(rgba(10,14,28,.78) ${frac * 360}deg, transparent 0deg)` : 'transparent';
     setText(this.specialCd, cd > 0 ? String(Math.ceil(cd)) : '');
@@ -790,6 +969,8 @@ export class Hud {
             h('tr', {}, h('td', { class: 'me', text: me.name }), h('th', { text: '' }), h('td', { class: 'foe', text: foe?.name ?? '—' })),
             row('Kademe', B.TIERS[me.tier].name, foe ? B.TIERS[foe.tier].name : '—'),
             row('Öldürülen', me.kills, foe?.kills ?? 0),
+            row('Komutan', `Sv${me.cmdLvl}`, foe ? `Sv${foe.cmdLvl}` : '—'),
+            row('Kartlar', cardIcons(me), foe ? cardIcons(foe) : '—'),
             row('Üretilen', me.trained, foe?.trained ?? 0),
             row('Kazanılan altın', me.goldEarned, foe?.goldEarned ?? 0),
             row('Süre', fmtTime(st.time), ''),
@@ -841,15 +1022,32 @@ export class Hud {
       ctx.fill();
       ctx.fillRect(x - 2, H - 44, 2, 28);
     }
-    // birimler
+    // Eter Kaynağı
+    if (st.src?.active) {
+      const x = X(this.scene.sx(st.src.x));
+      ctx.fillStyle = st.src.kind === 'fury' ? '#ff8a5a' : st.src.kind === 'heal' ? '#8dff9a' : '#ffd34d';
+      ctx.beginPath();
+      ctx.moveTo(x, H - 50);
+      ctx.lineTo(x + 6, H - 40);
+      ctx.lineTo(x, H - 30);
+      ctx.lineTo(x - 6, H - 40);
+      ctx.closePath();
+      ctx.fill();
+    }
+    // birimler (komutan altın çerçeveli)
     st.units.forEach((u) => {
       const ally = u.side === this.side;
       const x = X(this.scene.sx(u.x));
-      const r = u.arch === 'heavy' ? 5 : 3.5;
+      const r = u.cmd ? 6 : u.arch === 'heavy' ? 5 : 3.5;
       ctx.fillStyle = ally ? '#7fb6ff' : '#ff8a8a';
       ctx.beginPath();
-      ctx.arc(x, H - 18 - (ally ? 0 : 0), r, 0, Math.PI * 2);
+      ctx.arc(x, H - 18, r, 0, Math.PI * 2);
       ctx.fill();
+      if (u.cmd) {
+        ctx.strokeStyle = '#ffd34d';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
     });
     // kamera
     const vr = this.scene.viewRange;

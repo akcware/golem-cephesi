@@ -3,6 +3,7 @@ import Phaser from 'phaser';
 import * as B from '../../shared/balance';
 import type { Arch } from '../../shared/balance';
 import { generateArt, artKeys } from './index';
+import { CAPE_BOX, CROWN_BOX } from './commander';
 import { ART_SCALE, LAYOUT, type Team } from './layout';
 
 export * from './layout';
@@ -18,7 +19,13 @@ export const keys = {
   /** kuleye özel mermi / vuruş parlaması (g: kule derecesi) */
   tproj: artKeys.tproj,
   spec: artKeys.spec,
+  /** komutan ekleri: sırttaki pelerin ve taç */
+  cape: artKeys.cape,
+  crown: artKeys.crown,
+  /** Eter Kaynağı */
+  source: artKeys.source,
 };
+export { CAPE_BOX, CROWN_BOX, SOURCE_W, SOURCE_H } from './commander';
 
 /** Tüm dokuları üretir. BootScene.create içinde bir kez çağrılır. */
 export function generateTextures(scene: Phaser.Scene) {
@@ -73,7 +80,7 @@ function fitIcon(srcC: HTMLCanvasElement, size: number, pad: number, maxScale = 
   return c.toDataURL();
 }
 
-export function unitIcon(scene: Phaser.Scene, t: number, arch: Arch, team: Team = 'a', size = 112): string {
+export function unitIcon(scene: Phaser.Scene, t: number, arch: Arch, team: Team = 'a', size = 112, commander = false): string {
   const L = LAYOUT[arch];
   // önce birimi oyundaki gibi geniş bir tuvale 2x birleştir, sonra içeriği ikona sığdır
   const S = 2;
@@ -85,6 +92,7 @@ export function unitIcon(scene: Phaser.Scene, t: number, arch: Arch, team: Team 
     const img = src(scene, key);
     ctx.drawImage(img, x, y, img.width * k, img.height * k);
   };
+  if (commander) draw(keys.cape(t, team), CAPE_BOX[0], CAPE_BOX[1]);
   // arka bacak: oyundaki 0xbbbbbb tonlamasının karşılığı (koyu kopya)
   const leg = src(scene, keys.leg(t, arch));
   const dark = document.createElement('canvas');
@@ -98,6 +106,7 @@ export function unitIcon(scene: Phaser.Scene, t: number, arch: Arch, team: Team 
   ctx.drawImage(dark, -L.legGap / 2 - L.legW / 2, L.hipY, L.legW, L.legH);
   draw(keys.leg(t, arch), L.legGap / 2 - L.legW / 2, L.hipY);
   draw(keys.body(t, arch, team), -L.bodyW / 2, L.hipY + 3 - L.bodyH);
+  if (commander) draw(keys.crown(t), CROWN_BOX[0], CROWN_BOX[1]);
   const W = L.weapon;
   ctx.save();
   ctx.translate(W.x, W.y);
@@ -115,22 +124,25 @@ export interface IconSet {
   units: Record<Arch, string>[]; // [tier][arch]
   turrets: string[][]; // [tier][grade]
   specials: string[];
+  commanders: string[]; // [tier]
 }
 
 export function buildIcons(scene: Phaser.Scene): IconSet {
   const units: Record<Arch, string>[] = [];
   const turrets: string[][] = [];
   const specials: string[] = [];
+  const commanders: string[] = [];
   for (let t = 0; t <= B.MAX_TIER; t++) {
     units.push({
       melee: unitIcon(scene, t, 'melee'),
       ranged: unitIcon(scene, t, 'ranged'),
       heavy: unitIcon(scene, t, 'heavy'),
     });
+    commanders.push(unitIcon(scene, t, 'melee', 'a', 112, true));
     turrets.push([0, 1, 2].map((grade) => (scene.textures.exists(keys.turret(t, grade)) ? textureIcon(scene, keys.turret(t, grade)) : '')));
     specials.push(scene.textures.exists(keys.spec(t)) ? textureIcon(scene, keys.spec(t), 96, 12) : '');
   }
-  return { units, turrets, specials };
+  return { units, turrets, specials, commanders };
 }
 
 // ── arka plan ────────────────────────────────────────────

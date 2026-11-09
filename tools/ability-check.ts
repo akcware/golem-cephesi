@@ -26,6 +26,9 @@ function scenario(name: string, specs: Spec[], seconds: number, check: (r: { fx:
   sim.addPlayer('b', 'B', true);
   sim.startMatch();
   state.phase = 'playing';
+  // komutanlar ve Eter Kaynağı ölçümü bozmasın
+  state.players.forEach((p) => (p.cmdRespawn = 1e9));
+  state.src.next = 1e9;
   const units = specs.map((s, i) => {
     const u = new Unit();
     u.id = `u${i}`;

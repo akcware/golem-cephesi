@@ -33,6 +33,18 @@ export class Player extends Schema {
   @type('uint16') lost = 0;
   @type('uint16') trained = 0;
   @type('uint32') goldEarned = 0;
+  // çağ kartları
+  @type(['string']) cards = new ArraySchema<string>(); // seçilen kartlar
+  @type(['string']) offer = new ArraySchema<string>(); // seçim bekleyen 3 kart
+  @type('uint8') picks = 0; // kaç kart seçme hakkı var
+  // Eter Öfkesi kalan süresi
+  @type('float32') furyT = 0;
+  // komutan
+  @type('string') cmdId = ''; // hayattaysa birim id'si
+  @type('float32') cmdRespawn = 0; // ölüyse geri dönmesine kalan süre
+  @type('float32') cmdCd = 0; // yetenek bekleme süresi
+  @type('uint8') cmdLvl = 1;
+  @type('uint16') cmdKills = 0;
 
   // sadece sunucu
   goldF = 0;
@@ -51,11 +63,14 @@ export class Unit extends Schema {
   @type('uint8') state = 0; // 0 yürüyor, 1 bekliyor, 2 saldırıyor, 3 geri çekiliyor
   @type('uint16') atk = 0; // her saldırıda artar (istemci animasyon oynatır)
   @type('string') tgt = '';
-  @type('uint8') status = 0; // bit 1: yavaşladı (buz), bit 2: yanıyor
+  @type('uint8') status = 0; // STATUS_* bitleri (protocol.ts)
+  @type('boolean') cmd = false; // komutan mı
+  @type('uint8') lvl = 0; // komutan seviyesi
 
   // sadece sunucu
   cd = 0;
   slowT = 0;
+  stunT = 0; // sersemlemiş (yürüyemez, saldıramaz)
   def!: UnitDef;
   revived = false; // Ruh Bedeni kullanıldı mı
   shotsFired = 0; // Seri Atış için
@@ -82,6 +97,19 @@ export class Outpost extends Schema {
   cd = 0;
 }
 
+/** Ortanın bir yanında beliren Eter Kaynağı. */
+export class EtherSource extends Schema {
+  @type('boolean') active = false;
+  @type('float32') x = 0;
+  @type('string') kind = 'gold'; // SourceKind
+  @type('float32') cap = 0; // 0..1 alma ilerlemesi
+  @type('int8') capSide = -1; // ilerleme kimin lehine
+  @type('float32') next = 0; // belirmesine kalan süre (sn)
+
+  // sadece sunucu
+  spot = 0; // sıradaki yer (SOURCE_XS indeksi)
+}
+
 export class BattleState extends Schema {
   @type('string') phase = 'waiting';
   @type('float32') countdown = 0;
@@ -94,4 +122,5 @@ export class BattleState extends Schema {
   @type({ map: Player }) players = new MapSchema<Player>();
   @type({ map: Unit }) units = new MapSchema<Unit>();
   @type([Outpost]) outposts = new ArraySchema<Outpost>();
+  @type(EtherSource) src = new EtherSource();
 }

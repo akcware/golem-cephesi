@@ -15,6 +15,9 @@ function run(tier: number, grade: number) {
   sim.addPlayer('foe', 'Rakip', true);
   sim.startMatch();
   state.phase = 'playing';
+  // komutanlar ve Eter Kaynağı ölçümü bozmasın
+  state.players.forEach((p) => (p.cmdRespawn = 1e9));
+  state.src.next = 1e9;
   const t = me.turrets.at(0)!;
   t.tier = tier;
   t.grade = grade;

@@ -107,12 +107,16 @@ export class Menu {
             h('li', { html: '<b>Yetenekler:</b> Her çağın birimleri farklıdır: kök salan ahşap muhafız, kalkanlı bronz, zırhlı demir şövalye, hasar yansıtan kristal, dirilen eter bekçisi… (butonların üstüne gel).' }),
             h('li', { html: '<b>Karakollar:</b> Koridordaki 3 noktayı birimlerinle tutarak ele geçir (+%25 gelir). Karakol kurarsan (<kbd>K</kbd>) birimlerin oradan doğar ve düşman yıkmadan geçemez. Karakol silahsız kurulur; üstüne kule ekleyebilirsin.' }),
             h('li', { html: '<b>Kuleler:</b> Her çağda Hafif / Orta / Ağır üç kule var ve her biri farklı saldırır: ok, bomba, delici balista, ateş, buz, lazer, zincir şimşek. Yuvaya tıklayıp seç (<kbd>T</kbd>: parana yeten en iyisini kurar).' }),
+            h('li', { html: '<b>Çağ kartları:</b> Her kademe atlayışında 3 karttan birini seç (<kbd>Z</kbd> <kbd>X</kbd> <kbd>C</kbd>): ucuz ağır golemler, seken kule atışları, çifte özel güç… Her maç farklı bir yapıya döner.' }),
+            h('li', { html: '<b>Komutan:</b> Maç başında bedava gelir, öldürdükçe seviye atlar, ölürse 30 sn sonra döner. <kbd>R</kbd>: Sarsıcı Darbe, öndeki düşmanların üstüne atılıp onları sersemletir.' }),
+            h('li', { html: '<b>Eter Kaynağı:</b> 2. dakikadan itibaren ortanın bir yanında belirir. Alanında 6 sn sadece senin birimlerin durursa ödül (altın, öfke ya da şifa) senin.' }),
+            h('li', { html: '<b>Yıkım Saati:</b> 15. dakikadan sonra kaleler ve karakollar yavaşça çöker; maç kilitlenmez.' }),
             h('li', { html: 'Ağır golemler kaleye ekstra hasar verir. Özel güç (<kbd>Q</kbd>) düşmanın ön saflarını vurur.' }),
             h('li', { html: 'Haritayı sürükle, fare tekerleği ya da <kbd>A</kbd>/<kbd>D</kbd> ile kaydır.' }),
           ),
         ),
       ),
-      h('div', { class: 'menu-foot', text: 'Prototip v0.1' }),
+      h('div', { class: 'menu-foot', text: 'Prototip v0.2' }),
     );
     root.append(this.el);
   }
