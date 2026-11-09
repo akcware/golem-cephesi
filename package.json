@@ -1,0 +1,39 @@
+{
+  "name": "golem-cephesi",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Golem Cephesi - online multiplayer koridor savaşı oyunu (prototip)",
+  "scripts": {
+    "dev": "concurrently -k -n server,client -c magenta,cyan \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "tsx watch server/index.ts --port=2567 --dev",
+    "dev:client": "vite",
+    "build": "vite build",
+    "start": "tsx server/index.ts",
+    "typecheck": "tsc --noEmit",
+    "balance": "tsx tools/balance-sim.ts"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.6",
+    "concurrently": "^10.0.7",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.6"
+  },
+  "dependencies": {
+    "@colyseus/core": "^0.18.27",
+    "@colyseus/schema": "^5.0.45",
+    "@colyseus/sdk": "^0.18.9",
+    "@colyseus/ws-transport": "^0.18.4",
+    "express": "^5.3.0",
+    "phaser": "^3.90.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/akcware/golem-cephesi.git"
+  }
+}
