@@ -10,6 +10,7 @@ export const client = new Client(endpoint);
 
 export const net = {
   bot: (name: string, level: BotLevel): Promise<Room> => client.create('battle', { mode: 'bot', name, level }),
+  tutorial: (name: string): Promise<Room> => client.create('battle', { mode: 'tutorial', name }),
   quick: (name: string): Promise<Room> => client.joinOrCreate('battle', { mode: 'quick', name }),
   create: (name: string): Promise<Room> => client.create('battle', { mode: 'private', name }),
   joinCode: (code: string, name: string): Promise<Room> =>

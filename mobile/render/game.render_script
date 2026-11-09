@@ -1,0 +1,64 @@
+-- Çizim: dünya (savaş alanı) ve arayüz.
+-- Dünya: ekranın yüksekliği her zaman 720 dünya birimi gösterir (web'deki gibi), genişlik ekran oranına göre değişir.
+-- Kamera konumu oyun betiğinden her karede "camera" mesajıyla gelir.
+-- Arayüz: yüksekliği 720 birim olan, ekran oranına göre genişleyen düz bir düzlem (ui.gui_script aynı hesabı yapar).
+
+local VIEW_H = 720
+
+function init(self)
+	self.tile = render.predicate({ "tile" })
+	self.gui = render.predicate({ "gui" })
+	self.debug = render.predicate({ "debug_text" })
+	self.cam_x = 1000
+	self.shake_x = 0
+	self.shake_y = 0
+	self.clear = {
+		[graphics.BUFFER_TYPE_COLOR0_BIT] = vmath.vector4(0.31, 0.58, 0.87, 1),
+		[graphics.BUFFER_TYPE_DEPTH_BIT] = 1,
+		[graphics.BUFFER_TYPE_STENCIL_BIT] = 0,
+	}
+	self.view = vmath.matrix4()
+end
+
+function update(self)
+	local ww = render.get_window_width()
+	local wh = render.get_window_height()
+	if ww <= 0 or wh <= 0 then return end
+	local half_w = ww / wh * VIEW_H / 2
+
+	render.set_depth_mask(true)
+	render.set_stencil_mask(0xff)
+	render.clear(self.clear)
+	render.set_viewport(0, 0, ww, wh)
+
+	-- dünya
+	local cx = self.cam_x + self.shake_x
+	local cy = self.shake_y
+	render.set_view(self.view)
+	render.set_projection(vmath.matrix4_orthographic(cx - half_w, cx + half_w, cy, cy + VIEW_H, -100, 100))
+	render.set_depth_mask(false)
+	render.disable_state(graphics.STATE_DEPTH_TEST)
+	render.disable_state(graphics.STATE_CULL_FACE)
+	render.enable_state(graphics.STATE_BLEND)
+	render.set_blend_func(graphics.BLEND_FACTOR_ONE, graphics.BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
+	render.draw(self.tile)
+
+	-- arayüz
+	render.set_view(self.view)
+	render.set_projection(vmath.matrix4_orthographic(0, half_w * 2, 0, VIEW_H, -1, 1))
+	render.enable_state(graphics.STATE_STENCIL_TEST)
+	render.draw(self.gui)
+	render.draw(self.debug)
+	render.disable_state(graphics.STATE_STENCIL_TEST)
+	render.disable_state(graphics.STATE_BLEND)
+end
+
+function on_message(self, message_id, message)
+	if message_id == hash("camera") then
+		self.cam_x = message.x
+		self.shake_x = message.sx or 0
+		self.shake_y = message.sy or 0
+	elseif message_id == hash("clear_color") then
+		self.clear[graphics.BUFFER_TYPE_COLOR0_BIT] = message.color
+	end
+end

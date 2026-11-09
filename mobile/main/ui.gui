@@ -1,0 +1,26 @@
+script: "/main/ui.gui_script"
+fonts {
+  name: "big"
+  font: "/assets/fonts/ui_big.font"
+}
+fonts {
+  name: "ui"
+  font: "/assets/fonts/ui.font"
+}
+fonts {
+  name: "small"
+  font: "/assets/fonts/ui_small.font"
+}
+textures {
+  name: "ui"
+  texture: "/assets/ui.atlas"
+}
+background_color {
+  x: 0.0
+  y: 0.0
+  z: 0.0
+  w: 0.0
+}
+material: "/builtins/materials/gui.material"
+adjust_reference: ADJUST_REFERENCE_DISABLED
+max_nodes: 1024

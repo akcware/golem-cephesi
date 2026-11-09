@@ -1,0 +1,33 @@
+images {
+  image: "/assets/images/castles/castle_0_a.png"
+}
+images {
+  image: "/assets/images/castles/castle_0_e.png"
+}
+images {
+  image: "/assets/images/castles/castle_1_a.png"
+}
+images {
+  image: "/assets/images/castles/castle_1_e.png"
+}
+images {
+  image: "/assets/images/castles/castle_2_a.png"
+}
+images {
+  image: "/assets/images/castles/castle_2_e.png"
+}
+images {
+  image: "/assets/images/castles/castle_3_a.png"
+}
+images {
+  image: "/assets/images/castles/castle_3_e.png"
+}
+images {
+  image: "/assets/images/castles/castle_4_a.png"
+}
+images {
+  image: "/assets/images/castles/castle_4_e.png"
+}
+margin: 2
+extrude_borders: 2
+inner_padding: 0

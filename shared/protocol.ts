@@ -1,7 +1,7 @@
 // İstemci ↔ sunucu mesaj sözleşmesi ve state şekli (istemci tarafı tipleri için).
 import type { Arch } from './balance';
 
-export type GameMode = 'quick' | 'private' | 'bot';
+export type GameMode = 'quick' | 'private' | 'bot' | 'tutorial';
 export type BotLevel = 'easy' | 'normal' | 'hard';
 export type Phase = 'waiting' | 'countdown' | 'playing' | 'ended';
 export type EndReason = 'base' | 'forfeit' | '';
@@ -24,6 +24,8 @@ export interface ClientMessages {
   card_pick: { id: string };
   /** Komutanın yeteneği (Sarsıcı Darbe). */
   cmd_skill: Record<string, never>;
+  /** Eğitimde düğmeyle geçilen adımı geçer. */
+  tut_next: Record<string, never>;
   rematch: Record<string, never>;
 }
 
@@ -168,4 +170,6 @@ export interface IBattleState {
   units: MapLike<IUnit>;
   outposts: { length: number; at(i: number): IOutpost | undefined };
   src: ISource;
+  /** Eğitim maçında şu anki adım (shared/tutorial.ts TUTORIAL indeksi), değilse -1. */
+  tut: number;
 }

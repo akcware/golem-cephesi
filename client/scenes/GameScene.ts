@@ -25,6 +25,7 @@ import {
   type Team,
 } from '../textures';
 import { sfx } from '../sfx';
+import { music } from '../music';
 
 export const WORLD_MIN = -170;
 export const WORLD_MAX = B.WORLD_W + 170;
@@ -60,7 +61,36 @@ interface UnitView {
   lvlText?: Phaser.GameObjects.Text;
   lvl: number;
   scale: number;
+  /** yumuşatılmış x (görüntü buna vuruş sekmesi eklenerek çizilir) */
+  rx: number;
+  /** zemin çizgisi (doğuş düşüşü buna iner) */
+  baseY: number;
+  /** vurulma sekmesi / ezilmesi (1 → 0) */
+  hitT: number;
+  /** doğuş: yukarıdan düşüş (1 → 0) */
+  spawnT: number;
+  /** yere iniş ezilmesi (1 → 0) */
+  landT: number;
+  /** ağır adım tozu için son adım yönü */
+  step: number;
 }
+
+/** Ölen golemin savrulan parçası. */
+interface Debris {
+  img: Phaser.GameObjects.Image;
+  vx: number;
+  vy: number;
+  vr: number;
+  t: number;
+  floor: number;
+}
+
+/** Kale çatlaklarının yeri (kale dokusunun alt-ortasına göre; 0 kapı kulesi, 1 orta kule, 2 ana burç). */
+const CRACK_SPOTS = [
+  { x: 78, y: -96, at: 0.66, deep: false },
+  { x: 8, y: -150, at: 0.4, deep: true },
+  { x: -62, y: -178, at: 0.2, deep: true },
+];
 
 /** Komutan sıradan golemden bu kadar büyük görünür. */
 const CMD_SCALE = 1.3;
@@ -129,6 +159,15 @@ export class GameScene extends Phaser.Scene {
   private healFx!: Emitter;
   private burnEvents: Phaser.Time.TimerEvent[] = [];
   private clouds: { img: Phaser.GameObjects.Image; speed: number }[] = [];
+  private dust!: Emitter;
+  private debris: Debris[] = [];
+  /** hit-stop: görüntünün kısa donması (sn) */
+  private freeze = 0;
+  private lastFreeze = 0;
+  private timeK = 1;
+  private cracks: Phaser.GameObjects.Image[][] = [[], []];
+  private castleX = [0, 0];
+  private ruinT = [0, 0];
 
   private camX = 0;
   private idleT = 0;
@@ -191,6 +230,7 @@ export class GameScene extends Phaser.Scene {
     this.src.c.setVisible(false);
     this.resetOutposts();
     for (let ci = 0; ci < 2; ci++) {
+      for (const c of this.cracks[ci]) c.setVisible(false);
       this.castles[ci].setTexture(keys.castle(0, ci === 0 ? 'a' : 'e'));
       this.nameTexts[ci].setText('');
       for (let s = 0; s < B.MAX_SLOTS; s++) {
@@ -283,7 +323,7 @@ export class GameScene extends Phaser.Scene {
     } else if (fx.k === 'leap') {
       // zıplama: konum sunucudan gelir, burada sadece yükselip inme
       if (v) {
-        v.c.x = this.sx(fx.x) - v.dir * 40; // havada ilerlesin
+        v.rx = this.sx(fx.x) - v.dir * 40; // havada ilerlesin
         this.tweens.add({ targets: v.c, y: v.c.y - 46, duration: (B.CMD_LAND * 1000) / 2, yoyo: true, ease: 'Quad.easeOut' });
       }
       this.smoke.explode(4, x, GROUND_Y - 6);
@@ -298,7 +338,9 @@ export class GameScene extends Phaser.Scene {
       this.floatText(x, GROUND_Y - 120, B.CMD_SKILL_NAME + '!', mine ? '#ffe08a' : '#ff9a9a');
       if (this.onScreen(x)) {
         sfx.boom();
+        music.duck();
         this.cameras.main.shake(140, 0.004);
+        this.hitStop(0.08);
       }
     } else if (fx.k === 'level') {
       this.glows[v?.tier ?? 0].explode(24, x, y);
@@ -367,6 +409,14 @@ export class GameScene extends Phaser.Scene {
           .setOrigin(0.5, 1)
           .setScale((ci === 0 ? 1 : -1) / ART_SCALE, 1 / ART_SCALE)
           .setDepth(5),
+      );
+      this.castleX[ci] = cx;
+      this.cracks[ci] = CRACK_SPOTS.map((p) =>
+        this.add
+          .image(cx + (ci === 0 ? p.x : -p.x), CASTLE_BOTTOM + p.y, p.deep ? 'crack_1' : 'crack_0')
+          .setScale((ci === 0 ? 1 : -1) / ART_SCALE, 1 / ART_SCALE)
+          .setDepth(5.5)
+          .setVisible(false),
       );
       this.nameTexts.push(
         this.add
@@ -549,6 +599,34 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: g, scaleY: { from: 1, to: 0.97 }, duration: 600, yoyo: true, repeat: -1 });
   }
 
+  /** Kale canı azaldıkça duvarda çatlaklar belirir; yarının altında kulelerden duman, dörtte birin altında alev çıkar. */
+  private castleDamage(ci: number, frac: number, live: boolean) {
+    CRACK_SPOTS.forEach((sp, i) => {
+      const img = this.cracks[ci][i];
+      const show = live && frac < sp.at;
+      if (show !== img.visible) {
+        img.setVisible(show);
+        if (show) {
+          // çatlak açılırken kısa bir sarsıntı ve taş tozu
+          img.setAlpha(0);
+          this.tweens.add({ targets: img, alpha: 1, duration: 160 });
+          this.chunks[this.castleTier[ci] >= 0 ? this.castleTier[ci] : 0].explode(8, img.x, img.y);
+          this.dust.explode(4, img.x, img.y + 10);
+        }
+      }
+    });
+    if (!live || frac >= 0.5) return;
+    const now = this.time.now;
+    if (now < this.ruinT[ci]) return;
+    const burning = frac < 0.25;
+    this.ruinT[ci] = now + (burning ? 110 : 240);
+    const m = this.mountPos(ci, Math.floor(Math.random() * MOUNTS.length));
+    const x = m.x + (Math.random() * 2 - 1) * 14;
+    if (!this.onScreen(x)) return;
+    this.smoke.explode(1, x, m.y - 6);
+    if (burning) this.flame.explode(2, x, m.y + 4);
+  }
+
   private mountPos(ci: number, slot: number) {
     const m = MOUNTS[slot];
     const cx = ci === 0 ? CASTLE_CX : B.WORLD_W - CASTLE_CX;
@@ -608,6 +686,17 @@ export class GameScene extends Phaser.Scene {
         emitting: false,
       })
       .setDepth(890);
+    this.dust = this.add
+      .particles(0, 0, 'soft', {
+        lifespan: 450,
+        speedX: { min: -24, max: 24 },
+        speedY: { min: -26, max: -8 },
+        scale: { start: 0.35, end: 0.9 },
+        alpha: { start: 0.38, end: 0 },
+        tint: 0xd8cfc0,
+        emitting: false,
+      })
+      .setDepth(895);
     this.healFx = this.add
       .particles(0, 0, 'dot', {
         lifespan: 700,
@@ -659,7 +748,14 @@ export class GameScene extends Phaser.Scene {
 
   // ── ana döngü ────────────────────────────────────────────
   update(time: number, delta: number) {
-    const dt = Math.min(0.05, delta / 1000);
+    let dt = Math.min(0.05, delta / 1000);
+    // hit-stop: görüntü bir an donar (sunucu akmaya devam eder, birimler sonra yetişir)
+    if (this.freeze > 0) {
+      this.freeze -= dt;
+      this.setTimeK(this.freeze > 0 ? 0.06 : 1);
+      dt *= this.timeK;
+    }
+    this.updateDebris(dt);
     this.updateCamera(dt);
     for (const c of this.clouds) {
       c.img.x += c.speed * dt;
@@ -709,6 +805,7 @@ export class GameScene extends Phaser.Scene {
       }
       if (this.lastBaseHp[ci] >= 0 && p.baseHp < this.lastBaseHp[ci] - 0.01) this.baseHitFx(ci, p.tier);
       this.lastBaseHp[ci] = p.baseHp;
+      this.castleDamage(ci, p.baseMaxHp > 0 ? p.baseHp / p.baseMaxHp : 1, st.phase === 'playing' || st.phase === 'ended');
       if (this.nameTexts[ci].text !== p.name) this.nameTexts[ci].setText(p.name);
       if (ci === 0) this.rally.setVisible(p.stance === 'hold' && st.phase !== 'ended');
 
@@ -815,8 +912,9 @@ export class GameScene extends Phaser.Scene {
     }
     c.setScale(dir * scale, scale);
     c.setDepth(y + (arch === 'heavy' ? 0 : 0.5) + (cmd ? 0.3 : 0));
+    // doğuş: dökümhaneden yere düşer (bkz. syncView)
     c.setAlpha(0);
-    this.tweens.add({ targets: c, alpha: 1, duration: 250 });
+    c.y = y - 30;
     if (ally) sfx.spawn();
 
     const v: UnitView = {
@@ -847,6 +945,12 @@ export class GameScene extends Phaser.Scene {
       lvlText,
       lvl: 0,
       scale,
+      rx: this.sx(u.x),
+      baseY: y,
+      hitT: 0,
+      spawnT: 1,
+      landT: 0,
+      step: 0,
     };
     this.drawHp(v, u);
     return v;
@@ -867,12 +971,27 @@ export class GameScene extends Phaser.Scene {
 
   private syncView(v: UnitView, u: IUnit, dt: number, time: number) {
     const tx = this.sx(u.x);
-    const diff = tx - v.c.x;
-    v.c.x = Math.abs(diff) > 120 ? tx : v.c.x + diff * Math.min(1, dt * 12);
+    const diff = tx - v.rx;
+    v.rx = Math.abs(diff) > 120 ? tx : v.rx + diff * Math.min(1, dt * 12);
 
     // geri çekilirken arkasını dönüp yürür
     const face = (u.state === 3 ? -v.dir : v.dir) * v.scale;
-    if (v.c.scaleX !== face) v.c.scaleX = face;
+    // vurulunca geri seker ve ezilir; doğarken yukarıdan düşer, yere inince ezilir
+    v.hitT = Math.max(0, v.hitT - dt / 0.16);
+    v.landT = Math.max(0, v.landT - dt / 0.18);
+    const k = Math.sin(v.hitT * Math.PI * 0.5);
+    const squash = 0.07 * k + 0.14 * v.landT;
+    v.c.x = v.rx - Math.sign(face) * 4 * k;
+    v.c.setScale(face * (1 + squash * 0.6), v.scale * (1 - squash));
+    if (v.spawnT > 0) {
+      v.spawnT = Math.max(0, v.spawnT - dt / 0.26);
+      v.c.y = v.baseY - 30 * v.spawnT * v.spawnT;
+      v.c.setAlpha(Math.min(1, (1 - v.spawnT) * 3));
+      if (v.spawnT === 0) {
+        v.landT = 1;
+        if (this.onScreen(v.c.x)) this.dust.explode(v.arch === 'heavy' || v.cmd ? 6 : 3, v.c.x, v.baseY - 2);
+      }
+    }
     if (v.cmd) {
       if (u.tier !== v.tier) this.retexture(v, u.tier);
       if (v.lvlText) {
@@ -888,6 +1007,12 @@ export class GameScene extends Phaser.Scene {
     const moving = u.state === 0 || u.state === 3;
     if (moving) v.walkT += dt * (v.arch === 'heavy' ? 7 : 11);
     const s = Math.sin(v.walkT);
+    // ağır golem ve komutan her adımda toz kaldırır
+    const stepDir = Math.sign(s);
+    if (moving && stepDir !== 0 && stepDir !== v.step) {
+      v.step = stepDir;
+      if ((v.arch === 'heavy' || v.cmd) && v.spawnT === 0 && this.onScreen(v.c.x)) this.dust.explode(1, v.c.x + stepDir * 8, v.baseY - 1);
+    }
     const amp = moving ? 0.55 : 0;
     v.legB.rotation = s * amp;
     v.legF.rotation = -s * amp;
@@ -912,7 +1037,10 @@ export class GameScene extends Phaser.Scene {
 
     if (u.hp !== v.lastHp) {
       // yanma hasarı her karede azar azar düşer; her seferinde beyaz parlamasın
-      if (u.hp < v.lastHp - 0.02 * u.maxHp || (u.hp < v.lastHp && !(u.status & STATUS_BURN))) this.flashView(v);
+      if (u.hp < v.lastHp - 0.02 * u.maxHp || (u.hp < v.lastHp && !(u.status & STATUS_BURN))) {
+        this.flashView(v);
+        v.hitT = 1;
+      }
       // can artıyorsa (Kök Salma / Fidan) ara ara yeşil parıltı
       else if (u.hp > v.lastHp && Math.random() < 0.15) this.healFx.explode(1, v.c.x + (Math.random() - 0.5) * 16, v.c.y - v.height * 0.5);
       v.lastHp = u.hp;
@@ -1021,7 +1149,49 @@ export class GameScene extends Phaser.Scene {
 
   private hitFx(x: number, y: number, heavy: boolean) {
     this.spark.explode(heavy ? 10 : 5, x, y);
-    if (this.onScreen(x)) sfx.hit(heavy);
+    if (this.onScreen(x)) {
+      sfx.hit(heavy);
+      if (heavy) this.hitStop(0.045);
+    }
+  }
+
+  /** Görüntüyü kısa bir an dondurur (vuruşun ağırlığı hissedilsin). Sık tekrarlanmaz. */
+  private hitStop(sec: number) {
+    const now = this.time.now;
+    if (now - this.lastFreeze < 260) return;
+    this.lastFreeze = now;
+    this.freeze = Math.max(this.freeze, sec);
+  }
+
+  private setTimeK(k: number) {
+    if (this.timeK === k) return;
+    this.timeK = k;
+    this.tweens.timeScale = k;
+    this.time.timeScale = k;
+    for (const e of [...this.chunks, ...this.glows, this.spark, this.smoke, this.flame, this.healFx, this.dust]) e.timeScale = k;
+  }
+
+  /** Ölen golemin parçaları savrulur, sekip yere düşer, söner. */
+  private updateDebris(dt: number) {
+    for (let i = this.debris.length - 1; i >= 0; i--) {
+      const d = this.debris[i];
+      d.t += dt;
+      d.vy += 900 * dt;
+      d.img.x += d.vx * dt;
+      d.img.y += d.vy * dt;
+      d.img.rotation += d.vr * dt;
+      if (d.img.y >= d.floor && d.vy > 0) {
+        d.img.y = d.floor;
+        d.vy = Math.abs(d.vy) < 60 ? 0 : -d.vy * 0.35;
+        d.vx *= 0.55;
+        d.vr *= 0.45;
+      }
+      if (d.t > 0.65) d.img.setAlpha(Math.max(0, 1 - (d.t - 0.65) / 0.45));
+      if (d.t > 1.1) {
+        d.img.destroy();
+        this.debris.splice(i, 1);
+      }
+    }
   }
 
   private flashView(v: UnitView) {
@@ -1072,23 +1242,47 @@ export class GameScene extends Phaser.Scene {
     if (!v.ally) {
       const bounty = v.cmd ? B.commanderDef(v.tier, 1).bounty : B.unitDef(v.tier, v.arch).bounty;
       this.floatText(x, v.c.y - v.height - 14, `+${bounty}`, '#ffd34d');
-      if (visible) sfx.coin();
+      if (visible) {
+        sfx.coin();
+        const cam = this.cameras.main;
+        const r = this.game.canvas.getBoundingClientRect();
+        const k = r.width / this.scale.width;
+        this.events.emit('coin', r.left + (x - cam.worldView.x) * cam.zoom * k, r.top + (y - cam.worldView.y) * cam.zoom * k, v.cmd ? 6 : v.arch === 'heavy' ? 4 : 2);
+      }
     }
     v.hp.clear();
-    this.tweens.add({
-      targets: v.c,
-      alpha: 0,
-      angle: -70,
-      y: v.c.y + 6,
-      duration: 320,
-      onComplete: () => v.c.destroy(),
-    });
+    if (v.cmd) this.hitStop(0.06);
+    // parçalara ayrıl: gövde, bacaklar, silah (komutanda pelerin ve taç) savrulur
+    const away = -Math.sign(v.c.scaleX); // öldüren önünde: geriye doğru savrulur
+    const parts = [v.legB, v.legF, v.body, v.weapon, v.cape, v.crown].filter((p): p is Phaser.GameObjects.Image => !!p);
+    for (const img of parts) {
+      const m = img.getWorldTransformMatrix().decomposeMatrix();
+      v.c.remove(img);
+      this.add.existing(img);
+      img.setPosition(m.translateX, m.translateY).setRotation(m.rotation).setScale(m.scaleX, m.scaleY).setDepth(v.c.depth).setAlpha(1);
+      img.clearTint();
+      if (img === v.legB) img.setTint(0xbbbbbb);
+      const heavy = v.arch === 'heavy' || v.cmd;
+      this.debris.push({
+        img,
+        vx: away * (40 + Math.random() * 90) + (Math.random() * 2 - 1) * 70,
+        vy: -(heavy ? 160 : 130) - Math.random() * 170,
+        vr: (Math.random() * 2 - 1) * 9,
+        t: 0,
+        floor: v.baseY - 3 + Math.random() * 8,
+      });
+    }
+    v.c.destroy();
   }
 
   private clearViews() {
     for (const v of this.views.values()) v.c.destroy();
     this.views.clear();
     for (const p of this.projs) p.img.destroy();
+    for (const d of this.debris) d.img.destroy();
+    this.debris = [];
+    this.freeze = 0;
+    this.setTimeK(1);
     this.projs = [];
     for (const e of this.burnEvents) e.remove(false);
     this.burnEvents = [];
@@ -1366,6 +1560,10 @@ export class GameScene extends Phaser.Scene {
     const castle = this.castles[ci];
     castle.setTint(0xff9a9a);
     this.time.delayedCall(90, () => castle.clearTint());
+    // kale sarsılır (darbe kale önünden geldiği için içeri doğru)
+    this.tweens.killTweensOf(castle);
+    castle.x = this.castleX[ci];
+    this.tweens.add({ targets: castle, x: this.castleX[ci] + (ci === 0 ? -3 : 3), duration: 45, yoyo: true, repeat: 1, onComplete: () => (castle.x = this.castleX[ci]) });
     const fx = ci === 0 ? B.BASE_FRONT - 6 : B.WORLD_W - B.BASE_FRONT + 6;
     this.chunks[tier].explode(3, fx, GROUND_Y - 30 - Math.random() * 90);
     if (this.onScreen(fx)) sfx.base();
@@ -1443,6 +1641,7 @@ export class GameScene extends Phaser.Scene {
     }
     if (this.onScreen(x)) {
       sfx.boom();
+      if (big >= 1.5) music.duck();
       this.cameras.main.shake(90, 0.0015 * Math.min(2, big));
     }
   }

@@ -1,0 +1,61 @@
+name: "main"
+scale_along_z: 0
+embedded_instances {
+  id: "game"
+  data:
+  "components {\n"
+  "  id: \"script\"\n"
+  "  component: \"/main/game.script\"\n"
+  "}\n"
+  "embedded_components {\n"
+  "  id: \"unitf\"\n"
+  "  type: \"collectionfactory\"\n"
+  "  data: \"prototype: \\\"/main/unit.collection\\\"\\n\"\n"
+  "}\n"
+  "embedded_components {\n"
+  "  id: \"fxf\"\n"
+  "  type: \"factory\"\n"
+  "  data: \"prototype: \\\"/main/fx.go\\\"\\n\"\n"
+  "}\n"
+  "embedded_components {\n"
+  "  id: \"addf\"\n"
+  "  type: \"factory\"\n"
+  "  data: \"prototype: \\\"/main/fxadd.go\\\"\\n\"\n"
+  "}\n"
+  "embedded_components {\n"
+  "  id: \"bgf\"\n"
+  "  type: \"factory\"\n"
+  "  data: \"prototype: \\\"/main/bg.go\\\"\\n\"\n"
+  "}\n"
+  "embedded_components {\n"
+  "  id: \"castlef\"\n"
+  "  type: \"factory\"\n"
+  "  data: \"prototype: \\\"/main/castle.go\\\"\\n\"\n"
+  "}\n"
+  "embedded_components {\n"
+  "  id: \"upartf\"\n"
+  "  type: \"factory\"\n"
+  "  data: \"prototype: \\\"/main/upart.go\\\"\\n\"\n"
+  "}\n"
+  "embedded_components {\n"
+  "  id: \"textf\"\n"
+  "  type: \"factory\"\n"
+  "  data: \"prototype: \\\"/main/text.go\\\"\\n\"\n"
+  "}\n"
+}
+embedded_instances {
+  id: "ui"
+  data:
+  "components {\n"
+  "  id: \"gui\"\n"
+  "  component: \"/main/ui.gui\"\n"
+  "}\n"
+}
+instances {
+  id: "sfx"
+  prototype: "/main/sfx.go"
+}
+instances {
+  id: "music"
+  prototype: "/main/music.go"
+}

@@ -1,0 +1,45 @@
+images {
+  image: "/assets/images/bg/bg_sky.png"
+}
+images {
+  image: "/assets/images/bg/bg_sun.png"
+}
+images {
+  image: "/assets/images/bg/bg_cloud_0.png"
+}
+images {
+  image: "/assets/images/bg/bg_cloud_1.png"
+}
+images {
+  image: "/assets/images/bg/bg_cloud_2.png"
+}
+images {
+  image: "/assets/images/bg/bg_far2_0.png"
+}
+images {
+  image: "/assets/images/bg/bg_far2_1.png"
+}
+images {
+  image: "/assets/images/bg/bg_far_0.png"
+}
+images {
+  image: "/assets/images/bg/bg_far_1.png"
+}
+images {
+  image: "/assets/images/bg/bg_mid_0.png"
+}
+images {
+  image: "/assets/images/bg/bg_mid_1.png"
+}
+images {
+  image: "/assets/images/bg/bg_mid_2.png"
+}
+images {
+  image: "/assets/images/bg/bg_ground_0.png"
+}
+images {
+  image: "/assets/images/bg/bg_ground_1.png"
+}
+margin: 2
+extrude_borders: 2
+inner_padding: 0

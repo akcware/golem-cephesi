@@ -1517,3 +1517,193 @@ kbd {
     height: 30px;
   }
 }
+
+/* ── yeni oyuncu rehberi ─────────────────────────────────── */
+.btn.small {
+  padding: 6px 12px;
+  font-size: 14px;
+}
+.btn.tutorial.primary {
+  width: 100%;
+  margin-top: 4px;
+  background: linear-gradient(180deg, #ffd860, #e6a91f);
+  border-color: #ffe9a8;
+  color: #2a1a00;
+  font-size: 18px;
+  box-shadow: 0 0 18px rgba(255, 211, 77, 0.35);
+}
+.btn.tutorial.small {
+  align-self: center;
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+  text-decoration: underline;
+}
+.tuthint {
+  margin: 2px 0 6px;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+.coach {
+  position: absolute;
+  top: 182px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(560px, calc(100vw - 24px));
+  padding: 12px 16px 10px;
+  border-radius: 14px;
+  background: rgba(10, 14, 30, 0.94);
+  border: 2px solid var(--gold);
+  box-shadow: 0 0 26px rgba(255, 207, 74, 0.3), 0 12px 32px rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+  z-index: 14;
+}
+.coach.pop {
+  animation: pop 0.25s ease-out;
+}
+.coach .chead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+.coach .ctitle {
+  color: var(--gold);
+  font-size: 19px;
+}
+.coach .cstep {
+  color: var(--muted);
+  font-size: 13px;
+}
+.coach .ctext {
+  margin: 6px 0 10px;
+  font-size: 15px;
+  line-height: 1.35;
+}
+.coach .crow {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.tipbox {
+  position: absolute;
+  left: 50%;
+  bottom: 168px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(560px, calc(100vw - 24px));
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(10, 14, 30, 0.92);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--gold);
+  pointer-events: auto;
+  animation: pop 0.25s ease-out;
+  z-index: 13;
+}
+.tipbox .ttext {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.3;
+}
+.tipbox .ticon {
+  font-size: 20px;
+}
+.tut-hl {
+  position: relative;
+  z-index: 3;
+  outline: 3px solid var(--gold);
+  outline-offset: 3px;
+  border-radius: 12px;
+  animation: tutpulse 1.1s ease-in-out infinite;
+}
+@keyframes tutpulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 207, 74, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 22px 8px rgba(255, 207, 74, 0.5);
+  }
+}
+.tut-hide {
+  visibility: hidden !important;
+}
+@media (max-width: 900px) {
+  .coach {
+    top: 208px;
+    padding: 8px 12px;
+  }
+  .coach .ctext {
+    font-size: 13px;
+    margin: 4px 0 6px;
+  }
+  .tipbox {
+    bottom: 132px;
+  }
+}
+
+/* ── vuruş hissi: uçan altın, sayaç zıplaması ──────────── */
+.flycoin {
+  position: fixed;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff3b0, var(--gold) 55%, #b77a00);
+  border: 1.5px solid #7a4a00;
+  box-shadow: 0 0 8px rgba(255, 207, 74, 0.7);
+  pointer-events: none;
+  z-index: 60;
+}
+.res b.bump {
+  display: inline-block;
+  animation: goldbump 0.22s ease-out;
+}
+@keyframes goldbump {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.22);
+    color: #fff3b0;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ── müzik düğmesi ─────────────────────────────────────── */
+.icon-btn.music-btn.off {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+.menu-music {
+  position: absolute;
+  top: max(14px, env(safe-area-inset-top));
+  right: max(14px, env(safe-area-inset-right));
+}
+.menu-foot summary {
+  cursor: pointer;
+  list-style: none;
+  text-align: center;
+}
+.menu-foot summary::-webkit-details-marker {
+  display: none;
+}
+.menu-foot .credits {
+  margin: 6px 0 0;
+  padding: 8px 12px;
+  list-style: none;
+  border-radius: 8px;
+  background: rgba(10, 14, 30, 0.7);
+  line-height: 1.6;
+}
+.menu-foot .credits a {
+  color: #ffe08a;
+}
+.menu-foot .credits .note {
+  color: var(--muted);
+}

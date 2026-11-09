@@ -1,0 +1,228 @@
+images {
+  image: "/assets/images/units/ub_0_melee_a.png"
+}
+images {
+  image: "/assets/images/units/ub_0_melee_e.png"
+}
+images {
+  image: "/assets/images/units/ul_0_melee.png"
+}
+images {
+  image: "/assets/images/units/uw_0_melee.png"
+}
+images {
+  image: "/assets/images/units/ub_0_ranged_a.png"
+}
+images {
+  image: "/assets/images/units/ub_0_ranged_e.png"
+}
+images {
+  image: "/assets/images/units/ul_0_ranged.png"
+}
+images {
+  image: "/assets/images/units/uw_0_ranged.png"
+}
+images {
+  image: "/assets/images/units/ub_0_heavy_a.png"
+}
+images {
+  image: "/assets/images/units/ub_0_heavy_e.png"
+}
+images {
+  image: "/assets/images/units/ul_0_heavy.png"
+}
+images {
+  image: "/assets/images/units/uw_0_heavy.png"
+}
+images {
+  image: "/assets/images/units/cape_0_a.png"
+}
+images {
+  image: "/assets/images/units/cape_0_e.png"
+}
+images {
+  image: "/assets/images/units/crown_0.png"
+}
+images {
+  image: "/assets/images/units/ub_1_melee_a.png"
+}
+images {
+  image: "/assets/images/units/ub_1_melee_e.png"
+}
+images {
+  image: "/assets/images/units/ul_1_melee.png"
+}
+images {
+  image: "/assets/images/units/uw_1_melee.png"
+}
+images {
+  image: "/assets/images/units/ub_1_ranged_a.png"
+}
+images {
+  image: "/assets/images/units/ub_1_ranged_e.png"
+}
+images {
+  image: "/assets/images/units/ul_1_ranged.png"
+}
+images {
+  image: "/assets/images/units/uw_1_ranged.png"
+}
+images {
+  image: "/assets/images/units/ub_1_heavy_a.png"
+}
+images {
+  image: "/assets/images/units/ub_1_heavy_e.png"
+}
+images {
+  image: "/assets/images/units/ul_1_heavy.png"
+}
+images {
+  image: "/assets/images/units/uw_1_heavy.png"
+}
+images {
+  image: "/assets/images/units/cape_1_a.png"
+}
+images {
+  image: "/assets/images/units/cape_1_e.png"
+}
+images {
+  image: "/assets/images/units/crown_1.png"
+}
+images {
+  image: "/assets/images/units/ub_2_melee_a.png"
+}
+images {
+  image: "/assets/images/units/ub_2_melee_e.png"
+}
+images {
+  image: "/assets/images/units/ul_2_melee.png"
+}
+images {
+  image: "/assets/images/units/uw_2_melee.png"
+}
+images {
+  image: "/assets/images/units/ub_2_ranged_a.png"
+}
+images {
+  image: "/assets/images/units/ub_2_ranged_e.png"
+}
+images {
+  image: "/assets/images/units/ul_2_ranged.png"
+}
+images {
+  image: "/assets/images/units/uw_2_ranged.png"
+}
+images {
+  image: "/assets/images/units/ub_2_heavy_a.png"
+}
+images {
+  image: "/assets/images/units/ub_2_heavy_e.png"
+}
+images {
+  image: "/assets/images/units/ul_2_heavy.png"
+}
+images {
+  image: "/assets/images/units/uw_2_heavy.png"
+}
+images {
+  image: "/assets/images/units/cape_2_a.png"
+}
+images {
+  image: "/assets/images/units/cape_2_e.png"
+}
+images {
+  image: "/assets/images/units/crown_2.png"
+}
+images {
+  image: "/assets/images/units/ub_3_melee_a.png"
+}
+images {
+  image: "/assets/images/units/ub_3_melee_e.png"
+}
+images {
+  image: "/assets/images/units/ul_3_melee.png"
+}
+images {
+  image: "/assets/images/units/uw_3_melee.png"
+}
+images {
+  image: "/assets/images/units/ub_3_ranged_a.png"
+}
+images {
+  image: "/assets/images/units/ub_3_ranged_e.png"
+}
+images {
+  image: "/assets/images/units/ul_3_ranged.png"
+}
+images {
+  image: "/assets/images/units/uw_3_ranged.png"
+}
+images {
+  image: "/assets/images/units/ub_3_heavy_a.png"
+}
+images {
+  image: "/assets/images/units/ub_3_heavy_e.png"
+}
+images {
+  image: "/assets/images/units/ul_3_heavy.png"
+}
+images {
+  image: "/assets/images/units/uw_3_heavy.png"
+}
+images {
+  image: "/assets/images/units/cape_3_a.png"
+}
+images {
+  image: "/assets/images/units/cape_3_e.png"
+}
+images {
+  image: "/assets/images/units/crown_3.png"
+}
+images {
+  image: "/assets/images/units/ub_4_melee_a.png"
+}
+images {
+  image: "/assets/images/units/ub_4_melee_e.png"
+}
+images {
+  image: "/assets/images/units/ul_4_melee.png"
+}
+images {
+  image: "/assets/images/units/uw_4_melee.png"
+}
+images {
+  image: "/assets/images/units/ub_4_ranged_a.png"
+}
+images {
+  image: "/assets/images/units/ub_4_ranged_e.png"
+}
+images {
+  image: "/assets/images/units/ul_4_ranged.png"
+}
+images {
+  image: "/assets/images/units/uw_4_ranged.png"
+}
+images {
+  image: "/assets/images/units/ub_4_heavy_a.png"
+}
+images {
+  image: "/assets/images/units/ub_4_heavy_e.png"
+}
+images {
+  image: "/assets/images/units/ul_4_heavy.png"
+}
+images {
+  image: "/assets/images/units/uw_4_heavy.png"
+}
+images {
+  image: "/assets/images/units/cape_4_a.png"
+}
+images {
+  image: "/assets/images/units/cape_4_e.png"
+}
+images {
+  image: "/assets/images/units/crown_4.png"
+}
+margin: 2
+extrude_borders: 2
+inner_padding: 0

@@ -3,7 +3,7 @@ import Phaser from 'phaser';
 import * as B from '../../shared/balance';
 import { drawCastle } from './castles';
 import { drawCape, drawCrown, drawSource } from './commander';
-import { drawParticle, drawProj, drawSlot, drawSpecial, drawTurretProj } from './fx';
+import { drawCracks, drawParticle, drawProj, drawSlot, drawSpecial, drawTurretProj } from './fx';
 import { type Team } from './layout';
 import { drawTurret } from './turrets';
 import { drawBody, drawLeg, drawWeapon } from './units';
@@ -69,5 +69,6 @@ export function generateArt(scene: Phaser.Scene) {
   put(scene, 'slot', drawSlot());
   put(scene, K.source(), drawSource());
   for (const k of ['px', 'dot', 'soft', 'ring'] as const) put(scene, k, drawParticle(k));
+  for (let v = 0; v < 2; v++) put(scene, `crack_${v}`, drawCracks(v));
   lap('fx');
 }

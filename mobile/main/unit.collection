@@ -1,0 +1,94 @@
+name: "unit"
+scale_along_z: 0
+instances {
+  id: "root"
+  prototype: "/main/empty.go"
+  children: "aura"
+  children: "shadow"
+  children: "cape"
+  children: "legB"
+  children: "legF"
+  children: "body"
+  children: "crown"
+  children: "weapon"
+  children: "hpbg"
+  children: "hp"
+  children: "lvl"
+}
+instances {
+  id: "aura"
+  prototype: "/main/fxadd.go"
+  position {
+    z: 0.0
+  }
+}
+instances {
+  id: "shadow"
+  prototype: "/main/fx.go"
+  position {
+    z: 0.00001
+  }
+}
+instances {
+  id: "cape"
+  prototype: "/main/upart.go"
+  position {
+    z: 0.00002
+  }
+}
+instances {
+  id: "legB"
+  prototype: "/main/upart.go"
+  position {
+    z: 0.00003
+  }
+}
+instances {
+  id: "legF"
+  prototype: "/main/upart.go"
+  position {
+    z: 0.00004
+  }
+}
+instances {
+  id: "body"
+  prototype: "/main/upart.go"
+  position {
+    z: 0.00005
+  }
+}
+instances {
+  id: "crown"
+  prototype: "/main/upart.go"
+  position {
+    z: 0.00006
+  }
+}
+instances {
+  id: "weapon"
+  prototype: "/main/upart.go"
+  position {
+    z: 0.00007
+  }
+}
+instances {
+  id: "hpbg"
+  prototype: "/main/fx.go"
+  position {
+    z: 0.00008
+  }
+}
+instances {
+  id: "hp"
+  prototype: "/main/fx.go"
+  position {
+    z: 0.00009
+  }
+}
+instances {
+  id: "lvl"
+  prototype: "/main/text.go"
+  position {
+    z: 0.0001
+  }
+}

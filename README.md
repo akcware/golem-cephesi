@@ -61,8 +61,30 @@ npm run dev
 - Düşman öldürmek altın + XP verir. Kendi birimin ölünce de biraz XP gelir (geride kalan toparlayabilsin).
 - Bağlantısı kopan oyuncu 20 sn içinde geri gelebilir; bu sürede oyun donar.
 
+## Yeni oyuncu rehberi
+
+- **Eğitim maçı:** Adımlar `shared/tutorial.ts`'te; sunucuda `server/tutorial.ts` her adımı hazırlar (rakip birimi yollar, eksik altını tamamlar, XP verir) ve oyuncunun hamlesini bekler. İstemci `state.tut`'a bakıp adım panelini gösterir, ilgili düğmeyi parlatır.
+- **Kademeli açılım:** Eğitimde arayüz öğeleri tanıtıldıkları adıma kadar gizlidir (önce yalnızca birim düğmeleri, sonra Savun/Hücum, karakol, kule, kademe, komutan, özel güç).
+- **İpuçları:** Gerçek maçlarda bir durum ilk kez yaşanınca bir kez çıkan kısa ipucu (rakip ağır golem yolladı, Eter Kaynağı belirdi, kale zor durumda...). Görülenler cihazda saklanır.
+- **İlk maç:** Ad girmek zorunlu değil; eğitimi bitirmemiş oyuncuya kolay bot önerilir.
+- **Ölçüm:** Sunucu günlüğüne her eğitim adımı, tamamlanma ve bırakma yazılır (`[eğitim ODA] adım 5/15: heavy (34 sn)`); Render günlüklerinden oyuncuların nerede bıraktığı görülür.
+
+```bash
+npx tsx tools/tutorial-check.ts
+```
+
+## Mobil sürüm
+
+`mobile/` klasöründe Defold ile yazılmış yerel (WebView'sız) telefon istemcisi var. Aynı sunucuya bağlanır;
+çizimler ve denge değerleri bu depodaki kaynaklardan üretilir. Ayrıntılar: [mobile/README.md](mobile/README.md).
+
+```bash
+npm run mobile:assets
+```
+
 ## Modlar
 
+- **Eğitim:** Yeni oyuncu için 15 adımlı rehberli maç (3-4 dk): golem üretme, güç üçgeni, savun/hücum, noktalar, karakol, kule, kademe, çağ kartı, komutan, özel güç ve son saldırı. Rakip tarafı senaryolu bir eğitmen oynar; oyuncunun kalesi düşmez. İlk açılışta menüde öne çıkar, bitince "Eğitimi tekrar oyna" olarak kalır.
 - **Bota karşı:** Kolay / Normal / Zor. Bot hile yapmaz, insanla aynı komutları kullanır.
 - **Hızlı eşleşme:** Bekleyen başka bir oyuncuyla eşleşir.
 - **Oda kur:** 4 harfli kod ve davet linki (`?oda=ABCD`) üretir.
@@ -72,8 +94,10 @@ npm run dev
 ```
 shared/balance.ts   Tüm denge değerleri (birimler, kademeler, ekonomi) — dengelemek için burayı değiştir
 shared/protocol.ts  İstemci ↔ sunucu mesajları
+shared/tutorial.ts  Eğitim adımları ve ipuçları (web ve mobil ortak)
 server/sim.ts       Oyun kuralları (sunucu-otoriter simülasyon, 20 Hz)
 server/bot.ts       Yapay zeka
+server/tutorial.ts  Eğitim maçının yönetmeni (rakip tarafı senaryoyla oynar)
 server/BattleRoom.ts Colyseus odası: bağlantılar, komutlar, rövanş, yeniden bağlanma
 client/textures.ts  Tüm grafikler kodla çiziliyor (görsel dosyası yok)
 client/scenes/      Phaser sahnesi: çizim, animasyon, efektler
@@ -82,6 +106,33 @@ tools/balance-sim.ts Bot'a karşı bot maçlarıyla denge raporu
 tools/rusher.ts     Botu sınamak için oyuncu taklitleri (saldırgan, planlı, kaplumbağa, usta)
 tools/old-bot.ts    Botun güçlendirilmeden önceki sürümü (karşılaştırma için)
 tools/feature-check.ts Çağ kartı, komutan ve Eter Kaynağı kurallarının testleri
+tools/tutorial-check.ts Eğitim maçını sanal oyuncularla baştan sona oynatan test
+tools/bake-mobile.ts Çizimleri mobil sürüm için PNG'ye döker (aynı çizim kodu)
+tools/bake-sounds.ts Ses tariflerini (client/sounds.ts) mobil sürüm için WAV'a döker
+client/tracks.ts    Müzik parçaları, seviyeleri ve künyeleri (dosyalar public/music/)
+client/music.ts     Müzik: menü/savaş/gerilim geçişleri, maç sonu motifi, patlamada kısılma
+tools/encode-music.ts Ham müzik dosyalarını kırpar, seviyesini ölçer, OGG + MP3 olarak sıkıştırır
+tools/bake-music.ts  Müzik listesini ve OGG dosyalarını mobil sürüme taşır
+tools/export-lua.ts  Denge değerlerini mobil sürüm için Lua'ya aktarır
+mobile/             Defold ile yazılmış telefon istemcisi
+```
+
+## Müzik
+
+Tüm parçalar [OpenGameArt](https://opengameart.org)'tan, açık lisanslı. Baştaki ve sondaki sessizlikler kırpıldı, dosyalar OGG ve MP3 olarak yeniden sıkıştırıldı.
+
+| Nerede | Parça | Besteci | Lisans |
+|---|---|---|---|
+| Menü | [Nox Arcana - RPG Title Screen](https://opengameart.org/content/nox-arcana-rpg-title-screen) | HitCtrl | [CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| Savaş | [QaziJamJam](https://opengameart.org/content/qazijamjam-orchestral-battle-theme) | Emma_MA | CC0 |
+| Gerilim (kale düşerken, Yıkım Saati) | [Determined Pursuit](https://opengameart.org/content/determined-pursuit-epic-orchestra-loop) | Emma_MA | CC0 |
+| Zafer | [Victory Fanfare Short](https://opengameart.org/content/victory-fanfare-short) | cynicmusic | CC0 |
+| Yenilgi | [Lose Game Short Music Clip](https://opengameart.org/content/lose-game-short-music-clip) | Robin Lamb | CC0 |
+
+Parça değiştirmek için: ham dosyaları bir klasöre `menu.wav`, `battle.wav` … adlarıyla koy, `client/tracks.ts`'i güncelle ve şunu çalıştır (çıktıdaki önerilen `vol` değerlerini `tracks.ts`'e yaz):
+
+```bash
+npx tsx tools/encode-music.ts <klasör>
 ```
 
 ## Denge testi

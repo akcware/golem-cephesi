@@ -180,6 +180,16 @@ export class Simulation {
     if (Number.isFinite(xp) && xp > 0) this.addXp(p, Math.min(xp, 1e7));
   }
 
+  /** Eğitmen için: bedava birim çıkarır (at verilmezse tarafın doğuş noktasında; hpFrac: can oranı). */
+  tutorSpawn(p: Player, arch: Arch, hpFrac = 1, at?: number): Unit | null {
+    const def = B.unitDef(p.tier, arch);
+    const x = at ?? this.freeSpawnX(p.side, def.radius);
+    if (x === null) return null;
+    const u = this.spawn(p, def, x);
+    u.hp = u.maxHp * hpFrac;
+    return u;
+  }
+
   setStance(p: Player, stance: unknown): boolean {
     if (stance !== 'attack' && stance !== 'hold') return false;
     if (this.state.phase !== 'playing' && this.state.phase !== 'countdown') return false;

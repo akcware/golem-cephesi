@@ -1,0 +1,91 @@
+[project]
+title = Golem Cephesi
+version = 0.1.0
+dependencies#0 = https://github.com/colyseus/colyseus-defold/archive/0.18.zip
+dependencies#1 = https://github.com/defold/extension-websocket/archive/4.2.1.zip
+dependencies#2 = https://github.com/defold/extension-safearea/archive/refs/tags/1.5.2.zip
+
+[bootstrap]
+main_collection = /main/main.collectionc
+render = /render/game.renderc
+
+[input]
+game_binding = /input/game.input_bindingc
+
+[display]
+width = 1280
+height = 720
+high_dpi = 1
+fullscreen = 0
+update_frequency = 0
+vsync = 1
+
+[render]
+clear_color_red = 0.31
+clear_color_green = 0.58
+clear_color_blue = 0.87
+clear_color_alpha = 1
+
+[graphics]
+texture_profiles = /game.texture_profiles
+default_texture_min_filter = linear
+default_texture_mag_filter = linear
+max_draw_calls = 4096
+max_characters = 32768
+
+[script]
+shared_state = 1
+
+[collection]
+max_instances = 4096
+
+[collection_factory]
+max_count = 512
+
+[factory]
+max_count = 2048
+
+[sprite]
+max_count = 4096
+
+[label]
+max_count = 256
+
+[gui]
+max_count = 8
+max_node_count = 1024
+max_animation_count = 512
+
+[particle_fx]
+max_count = 8
+
+[sound]
+gain = 1.0
+
+[physics]
+type = 2D
+max_count = 0
+
+[android]
+package = com.akcware.golemcephesi
+minimum_sdk_version = 21
+version_code = 1
+
+[ios]
+bundle_identifier = com.akcware.golemcephesi
+
+[html5]
+scale_mode = stretch
+show_fullscreen_button = 0
+show_made_with_defold = 0
+heap_size = 256
+
+[engine]
+fixed_update_frequency = 60
+
+[safearea]
+resize_game_view = 0
+
+[golem]
+server = wss://golem-cephesi.onrender.com
+dev_server = ws://localhost:2567

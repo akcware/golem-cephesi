@@ -18,6 +18,7 @@ import {
   makeCanvas,
   poly,
   rivet,
+  rng,
   rr,
   shade,
   sparkle,
@@ -379,6 +380,57 @@ export function drawSlot(): HTMLCanvasElement {
     for (const x of [5, 12, 18, 24, 31]) rivet(ctx, x, 6.2, 0.8, tone(0xc89a50, 0x7a5a28, 0xffe0a0));
     shade(ctx, ell(18, 3.2, 15, 2.6), tone(0x5a524c, 0x2e2a28, 0x8a807a), { sh: 0.8, hl: 0.4, lw: 1.1 });
     fill(ctx, ell(18, 3, 9.5, 1.4), 'rgba(20,16,14,0.6)');
+  });
+}
+
+// ── kale çatlakları ──────────────────────────────────────
+/**
+ * Hasar alan kalenin duvarına konan çatlak (yanık izi + kırık çizgileri). variant: 0 hafif, 1 derin.
+ * Ortası kalenin duvarına oturur; her kademenin malzemesinin üstünde okunsun diye koyu ve nötr.
+ */
+export function drawCracks(variant: number): HTMLCanvasElement {
+  const W = 56;
+  const H = 72;
+  return canvasOf(W, H, (ctx) => {
+    const R = rng(31 + variant * 17);
+    // is / yanık lekesi
+    const g = ctx.createRadialGradient(W / 2, H / 2, 2, W / 2, H / 2, W * 0.48);
+    g.addColorStop(0, `rgba(20,14,10,${variant ? 0.3 : 0.16})`);
+    g.addColorStop(1, 'rgba(20,14,10,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    // ana yarık: yukarıdan aşağı zikzak; birkaç kısa dal. Önce açık kenar (ışık), üstüne koyu yarık.
+    const cracks: number[][] = [];
+    const main = (x0: number, len: number) => {
+      const pts = [x0, H * 0.14];
+      let x = x0;
+      let y = H * 0.14;
+      const steps = 9;
+      for (let i = 0; i < steps; i++) {
+        // düzenli zikzak: her adımda yön değişir, küçük sapma
+        x += (i % 2 ? 1 : -1) * R.range(1.5, 4) + R.range(-1, 1);
+        y += len / steps;
+        pts.push(x, y);
+        if (i > 1 && i < steps - 2 && R.next() < 0.35) {
+          const dir = i % 2 ? 1 : -1;
+          cracks.push([x, y, x + dir * R.range(3, 6), y + R.range(1, 4), x + dir * R.range(6, 10), y + R.range(2, 7)]);
+        }
+      }
+      cracks.push(pts);
+    };
+    main(W / 2 + R.range(-6, 6), H * (variant ? 0.72 : 0.55));
+    if (variant) main(W / 2 + R.range(-16, -8), H * 0.45);
+    const lw = variant ? 1.8 : 1.3;
+    for (const p of cracks) line(ctx, p.map((v, i) => v + (i % 2 ? 0.8 : 0.6)), lw + 0.4, 'rgba(255,240,220,0.3)');
+    for (const p of cracks) line(ctx, p, lw, 'rgba(22,14,10,0.9)');
+    // derin hasarda kopmuş taş parçaları
+    if (variant) {
+      for (let i = 0; i < 3; i++) {
+        const x = W / 2 + R.range(-12, 12);
+        const y = H * R.range(0.35, 0.8);
+        fill(ctx, poly(x, y, x + R.range(3, 6), y + R.range(-1, 2), x + R.range(1, 4), y + R.range(3, 6)), 'rgba(22,14,10,0.8)');
+      }
+    }
   });
 }
 

@@ -1,0 +1,198 @@
+images {
+  image: "/assets/images/ui/icon_u_0_melee.png"
+}
+images {
+  image: "/assets/images/ui/icon_u_0_ranged.png"
+}
+images {
+  image: "/assets/images/ui/icon_u_0_heavy.png"
+}
+images {
+  image: "/assets/images/ui/icon_cmd_0.png"
+}
+images {
+  image: "/assets/images/ui/icon_tur_0_0.png"
+}
+images {
+  image: "/assets/images/ui/icon_tur_0_1.png"
+}
+images {
+  image: "/assets/images/ui/icon_tur_0_2.png"
+}
+images {
+  image: "/assets/images/ui/icon_spec_0.png"
+}
+images {
+  image: "/assets/images/ui/icon_u_1_melee.png"
+}
+images {
+  image: "/assets/images/ui/icon_u_1_ranged.png"
+}
+images {
+  image: "/assets/images/ui/icon_u_1_heavy.png"
+}
+images {
+  image: "/assets/images/ui/icon_cmd_1.png"
+}
+images {
+  image: "/assets/images/ui/icon_tur_1_0.png"
+}
+images {
+  image: "/assets/images/ui/icon_tur_1_1.png"
+}
+images {
+  image: "/assets/images/ui/icon_tur_1_2.png"
+}
+images {
+  image: "/assets/images/ui/icon_spec_1.png"
+}
+images {
+  image: "/assets/images/ui/icon_u_2_melee.png"
+}
+images {
+  image: "/assets/images/ui/icon_u_2_ranged.png"
+}
+images {
+  image: "/assets/images/ui/icon_u_2_heavy.png"
+}
+images {
+  image: "/assets/images/ui/icon_cmd_2.png"
+}
+images {
+  image: "/assets/images/ui/icon_tur_2_0.png"
+}
+images {
+  image: "/assets/images/ui/icon_tur_2_1.png"
+}
+images {
+  image: "/assets/images/ui/icon_tur_2_2.png"
+}
+images {
+  image: "/assets/images/ui/icon_spec_2.png"
+}
+images {
+  image: "/assets/images/ui/icon_u_3_melee.png"
+}
+images {
+  image: "/assets/images/ui/icon_u_3_ranged.png"
+}
+images {
+  image: "/assets/images/ui/icon_u_3_heavy.png"
+}
+images {
+  image: "/assets/images/ui/icon_cmd_3.png"
+}
+images {
+  image: "/assets/images/ui/icon_tur_3_0.png"
+}
+images {
+  image: "/assets/images/ui/icon_tur_3_1.png"
+}
+images {
+  image: "/assets/images/ui/icon_tur_3_2.png"
+}
+images {
+  image: "/assets/images/ui/icon_spec_3.png"
+}
+images {
+  image: "/assets/images/ui/icon_u_4_melee.png"
+}
+images {
+  image: "/assets/images/ui/icon_u_4_ranged.png"
+}
+images {
+  image: "/assets/images/ui/icon_u_4_heavy.png"
+}
+images {
+  image: "/assets/images/ui/icon_cmd_4.png"
+}
+images {
+  image: "/assets/images/ui/icon_tur_4_0.png"
+}
+images {
+  image: "/assets/images/ui/icon_tur_4_1.png"
+}
+images {
+  image: "/assets/images/ui/icon_tur_4_2.png"
+}
+images {
+  image: "/assets/images/ui/icon_spec_4.png"
+}
+images {
+  image: "/assets/images/ui/icon_card_foundry.png"
+}
+images {
+  image: "/assets/images/ui/icon_card_alloy.png"
+}
+images {
+  image: "/assets/images/ui/icon_card_vital.png"
+}
+images {
+  image: "/assets/images/ui/icon_card_warcry.png"
+}
+images {
+  image: "/assets/images/ui/icon_card_marksman.png"
+}
+images {
+  image: "/assets/images/ui/icon_card_loot.png"
+}
+images {
+  image: "/assets/images/ui/icon_card_vein.png"
+}
+images {
+  image: "/assets/images/ui/icon_card_wisdom.png"
+}
+images {
+  image: "/assets/images/ui/icon_card_ricochet.png"
+}
+images {
+  image: "/assets/images/ui/icon_card_lens.png"
+}
+images {
+  image: "/assets/images/ui/icon_card_masonry.png"
+}
+images {
+  image: "/assets/images/ui/icon_card_rampart.png"
+}
+images {
+  image: "/assets/images/ui/icon_card_echo.png"
+}
+images {
+  image: "/assets/images/ui/icon_card_distill.png"
+}
+images {
+  image: "/assets/images/ui/icon_card_banner.png"
+}
+images {
+  image: "/assets/images/ui/icon_src_gold.png"
+}
+images {
+  image: "/assets/images/ui/icon_src_fury.png"
+}
+images {
+  image: "/assets/images/ui/icon_src_heal.png"
+}
+images {
+  image: "/assets/images/ui/ui_round.png"
+}
+images {
+  image: "/assets/images/ui/ui_frame.png"
+}
+images {
+  image: "/assets/images/ui/ui_circle.png"
+}
+images {
+  image: "/assets/images/ui/ui_white.png"
+}
+images {
+  image: "/assets/images/ui/ui_flag.png"
+}
+images {
+  image: "/assets/images/ui/ui_diamond.png"
+}
+images {
+  image: "/assets/images/ui/ui_coin.png"
+}
+margin: 2
+extrude_borders: 2
+inner_padding: 0

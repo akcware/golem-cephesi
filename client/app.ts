@@ -5,6 +5,7 @@ import type { GameScene } from './scenes/GameScene';
 import type { IconSet } from './textures';
 import { net } from './net';
 import { sfx } from './sfx';
+import { music } from './music';
 import { Menu } from './ui/menu';
 import { Hud } from './ui/hud';
 import { toast } from './ui/dom';
@@ -33,11 +34,16 @@ export class App {
     const ui = document.getElementById('ui')!;
     this.menu = new Menu(ui, {
       bot: (level) => this.join(() => net.bot(this.menu.name, level)),
+      tutorial: () => this.join(() => net.tutorial(this.menu.name)),
       quick: () => this.join(() => net.quick(this.menu.name)),
       create: () => this.join(() => net.create(this.menu.name)),
       join: (code) => this.join(() => net.joinCode(code, this.menu.name)),
     });
-    this.hud = new Hud(ui, scene, icons, () => this.leave());
+    this.hud = new Hud(ui, scene, icons, () => this.leave(), () => {
+      // eğitimin sonunda: kolay bota karşı ilk gerçek maç
+      this.leave();
+      void this.join(() => net.bot(this.menu.name, 'easy'));
+    });
 
     // Davet linki: ?oda=ABCD
     const params = new URLSearchParams(location.search);
@@ -99,7 +105,9 @@ export class App {
     this.room = undefined;
     this.scene.unbind();
     this.hud.unbind();
+    music.menu();
     this.menu.show();
+    this.menu.refresh();
     if (code !== undefined && code !== CONSENTED && code !== 1000) toast('Sunucu bağlantısı koptu.', 'error');
   }
 }

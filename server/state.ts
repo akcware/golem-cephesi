@@ -123,4 +123,6 @@ export class BattleState extends Schema {
   @type({ map: Unit }) units = new MapSchema<Unit>();
   @type([Outpost]) outposts = new ArraySchema<Outpost>();
   @type(EtherSource) src = new EtherSource();
+  /** Eğitim maçında şu anki adım (-1: eğitim değil). */
+  @type('int8') tut = -1;
 }

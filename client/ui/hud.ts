@@ -7,7 +7,11 @@ import type { GameScene } from '../scenes/GameScene';
 import { WORLD_MAX, WORLD_MIN } from '../scenes/GameScene';
 import type { IconSet } from '../textures';
 import { sfx } from '../sfx';
+import { music, musicButton } from '../music';
+import { TENSION_HP } from '../tracks';
 import { fmtNum, fmtTime, h, setClass, setText, toast } from './dom';
+import { TUTORIAL, TUT_REVEAL, tipDef, tutIndex, type TutTarget } from '../../shared/tutorial';
+import { markTip, pendingTip, setTutorialDone } from './onboarding';
 
 const KEYS: Record<Arch, string> = { melee: '1', ranged: '2', heavy: '3' };
 
@@ -78,17 +82,37 @@ export class Hud {
   private overlay!: HTMLElement;
   private banner!: HTMLElement;
   private muteBtn!: HTMLButtonElement;
+  private musicBtn!: HTMLButtonElement;
+  // yeni oyuncu rehberi
+  private unitsGroup!: HTMLElement;
+  private queueGroup!: HTMLElement;
+  private slotsGroup!: HTMLElement;
+  private opsRow!: HTMLElement;
+  private coach!: { el: HTMLElement; step: HTMLElement; title: HTMLElement; text: HTMLElement; next: HTMLButtonElement; skip: HTMLButtonElement };
+  private coachKey = '';
+  private tipBox!: { el: HTMLElement; text: HTMLElement };
+  private tipId = '';
+  private tipUntil = 0;
+  private tipGap = 0;
+  private hl: HTMLElement[] = [];
+  // altın sayacı sayarak artar; öldürülen düşmandan sayaca altın uçar
+  private goldShown = -1;
+  private goldTarget = 0;
+  private flying = 0;
 
   constructor(
     root: HTMLElement,
     private scene: GameScene,
     private icons: IconSet,
     private onLeave: () => void,
+    /** Eğitimin sonunda "Bota Karşı Oyna" */
+    private onPlayBot: () => void = () => {},
   ) {
     this.el = h('div', { class: 'hud hidden' });
     this.build();
     root.append(this.el);
     window.addEventListener('keydown', (e) => this.onKey(e));
+    scene.events.on('coin', (x: number, y: number, n: number) => this.flyCoins(x, y, n));
   }
 
   // ── kurulum ──────────────────────────────────────────────
@@ -120,8 +144,9 @@ export class Hud {
       if (e.buttons) mmMove(e);
     });
 
-    this.muteBtn = h('button', { class: 'icon-btn', title: 'Ses', onclick: () => this.toggleMute() });
+    this.muteBtn = h('button', { class: 'icon-btn', title: 'Efekt sesleri', onclick: () => this.toggleMute() });
     this.renderMute();
+    this.musicBtn = musicButton();
     const leaveBtn = h('button', { class: 'icon-btn', title: 'Maçtan çık', text: '✕', onclick: () => this.confirmLeave() });
 
     // ileri karakol noktaları (ekranda soldan sağa: benim kalemden rakibe)
@@ -146,7 +171,7 @@ export class Hud {
       this.me.el,
       h('div', { class: 'center card' }, this.timerEl, this.minimap, opsRow, this.srcEl),
       this.foe.el,
-      h('div', { class: 'corner' }, this.muteBtn, leaveBtn),
+      h('div', { class: 'corner' }, this.musicBtn, this.muteBtn, leaveBtn),
     );
 
     this.goldEl = h('b', { text: '0' });
@@ -268,9 +293,33 @@ export class Hud {
     // çağ kartı seçimi (kademe atlayınca belirir)
     this.offerEl = h('div', { class: 'offer hidden' });
 
+    // rehber: eğitim adımı paneli ve gerçek maçlarda bir kerelik ipuçları
+    this.unitsGroup = units;
+    this.queueGroup = queue;
+    this.slotsGroup = slots;
+    this.opsRow = opsRow;
+    const cStep = h('span', { class: 'cstep' });
+    const cTitle = h('b', { class: 'ctitle' });
+    const cText = h('p', { class: 'ctext' });
+    const cNext = h('button', { class: 'btn primary', text: 'Devam', onclick: () => this.send('tut_next') });
+    const cSkip = h('button', { class: 'btn small', text: 'Eğitimi geç', onclick: () => this.skipTutorial() });
+    this.coach = {
+      el: h('div', { class: 'coach hidden' }, h('div', { class: 'chead' }, cTitle, cStep), cText, h('div', { class: 'crow' }, cSkip, cNext)),
+      step: cStep,
+      title: cTitle,
+      text: cText,
+      next: cNext,
+      skip: cSkip,
+    };
+    const tipText = h('span', { class: 'ttext' });
+    this.tipBox = {
+      el: h('div', { class: 'tipbox hidden' }, h('span', { class: 'ticon', text: '💡' }), tipText, h('button', { class: 'btn small', text: 'Tamam', onclick: () => this.hideTip() })),
+      text: tipText,
+    };
+
     this.overlay = h('div', { class: 'overlay hidden' });
     this.banner = h('div', { class: 'banner' });
-    this.el.append(top, res, bottom, this.offerEl, this.overlay, this.banner);
+    this.el.append(top, res, bottom, this.offerEl, this.coach.el, this.tipBox.el, this.overlay, this.banner);
   }
 
   /** Sunulan kartları çizer (sadece sunum değişince). */
@@ -334,10 +383,18 @@ export class Hud {
     this.lastSiege = false;
     this.me.chipKey = '';
     this.foe.chipKey = '';
+    this.coachKey = '';
+    this.hideTip();
+    this.tipGap = performance.now() + 15000; // maçın ilk saniyelerinde ipucu yağmasın
     this.el.classList.remove('hidden');
     this.update();
     this.interval = window.setInterval(() => this.update(), 100);
+    this.goldShown = -1;
+    let last = performance.now();
     const loop = () => {
+      const now = performance.now();
+      this.tickGold((now - last) / 1000);
+      last = now;
       this.drawMinimap();
       this.raf = requestAnimationFrame(loop);
     };
@@ -595,6 +652,7 @@ export class Hud {
 
   private confirmLeave() {
     const s = this.state();
+    if (s?.st.mode === 'tutorial') return this.skipTutorial();
     const active = s && (s.st.phase === 'playing' || s.st.phase === 'countdown');
     if (active && !window.confirm('Maçtan çıkarsan yenilmiş sayılırsın. Emin misin?')) return;
     this.onLeave();
@@ -620,8 +678,13 @@ export class Hud {
       this.fillCard(this.foe, foe);
       this.renderChips(this.foe, foe);
     } else {
+      // rakip henüz yok (bekleme): önceki maçtan kalanları temizle
       setText(this.foe.name, '—');
       setText(this.foe.tier, '');
+      setText(this.foe.hpText, '');
+      this.foe.fill.style.width = '0%';
+      this.foe.chips.innerHTML = '';
+      this.foe.chipKey = '';
     }
     const mods = B.cardMods(me.cards);
     // süre + Yıkım Saati
@@ -637,9 +700,12 @@ export class Hud {
     setClass(this.timerEl, 'siege', siege || B.SIEGE_TIME - st.time < 60);
     if (siege && !this.lastSiege && st.phase === 'playing') this.showBanner('⚠ Yıkım Saati başladı: kaleler çöküyor!', 'warn');
     this.lastSiege = siege;
+    // gerilim müziği: kalelerden biri düşmek üzereyken ya da Yıkım Saati'nde
+    const hpFrac = (p?: IPlayer) => (p && p.baseMaxHp > 0 ? p.baseHp / p.baseMaxHp : 1);
+    music.tension(st.phase === 'playing' && (siege || hpFrac(me) < TENSION_HP || hpFrac(foe) < TENSION_HP));
     // Eter Kaynağı
     const src = st.src;
-    if (src && st.phase === 'playing') {
+    if (src && st.phase === 'playing' && st.mode !== 'tutorial') {
       if (src.active) {
         const info = B.SOURCE_KINDS[src.kind as B.SourceKind];
         const who = src.cap > 0 ? (src.capSide === this.side ? ` · senin %${Math.round(src.cap * 100)}` : ` · rakip %${Math.round(src.cap * 100)}`) : '';
@@ -660,14 +726,22 @@ export class Hud {
     let ownedOps = 0;
     for (let i = 0; i < (st.outposts?.length ?? 0); i++) if (st.outposts.at(i)!.owner === this.side) ownedOps++;
     const income = B.TIERS[me.tier].income * (1 + ownedOps * B.OUTPOST_INCOME) * mods.income;
-    setText(this.goldEl, fmtNum(gold));
+    this.goldTarget = gold;
+    if (this.goldShown < 0 || gold < this.goldShown) this.goldShown = gold; // harcama anında düşer
     setText(this.incomeEl, `+${Math.round(income * 10) / 10}/sn`);
 
     // karakol noktaları
     for (let s = 0; s < this.opEls.length; s++) {
       const el = this.opEls[s];
       const o = st.outposts?.at(this.opIndex(s));
-      if (!o) continue;
+      if (!o) {
+        // maç başlamadı: noktalar henüz yok (önceki maçın etiketleri kalmasın)
+        setText(el.label, '');
+        if (el.btn.dataset.state !== 'neutral') el.btn.dataset.state = 'neutral';
+        setClass(el.btn, 'built', false);
+        el.btn.disabled = true;
+        continue;
+      }
       let cls = 'neutral';
       let text = 'Tarafsız';
       let enabled = false;
@@ -834,6 +908,153 @@ export class Hud {
       this.evolveBtn.disabled = !playing || !ready;
       setClass(this.evolveBtn, 'ready', playing && ready);
     }
+
+    this.updateOnboarding(st, me, playing);
+  }
+
+  /** Altın sayacı hedefe doğru sayar (kazanınca), harcayınca anında düşer. */
+  private tickGold(dt: number) {
+    if (this.goldShown < 0) return;
+    const d = this.goldTarget - this.goldShown;
+    this.goldShown = Math.abs(d) < 0.5 ? this.goldTarget : this.goldShown + d * Math.min(1, dt * 9);
+    setText(this.goldEl, fmtNum(Math.round(this.goldShown)));
+  }
+
+  /** Öldürülen düşmanın yerinden altın sayacına uçan sikkeler. */
+  private flyCoins(x: number, y: number, n: number) {
+    if (!this.room || this.el.classList.contains('hidden')) return;
+    const target = this.goldEl.getBoundingClientRect();
+    const tx = target.left + 8;
+    const ty = target.top + target.height / 2;
+    for (let i = 0; i < n && this.flying < 14; i++) {
+      this.flying++;
+      const c = h('div', { class: 'flycoin' });
+      const sx = x + (Math.random() * 2 - 1) * 10;
+      const sy = y + (Math.random() * 2 - 1) * 8;
+      c.style.left = `${sx}px`;
+      c.style.top = `${sy}px`;
+      document.body.append(c);
+      // önce hafifçe havaya fırlar, sonra sayaca süzülür
+      const pop = -30 - Math.random() * 25;
+      const a = c.animate(
+        [
+          { transform: 'translate(-50%, -50%) scale(0.4)', opacity: 0 },
+          { transform: `translate(calc(-50% + ${(Math.random() * 2 - 1) * 18}px), calc(-50% + ${pop}px)) scale(1)`, opacity: 1, offset: 0.25 },
+          { transform: `translate(calc(-50% + ${tx - sx}px), calc(-50% + ${ty - sy}px)) scale(0.55)`, opacity: 0.9 },
+        ],
+        { duration: 620 + i * 70, delay: i * 50, easing: 'cubic-bezier(.45,0,.75,1)', fill: 'forwards' },
+      );
+      a.onfinish = () => {
+        c.remove();
+        this.flying--;
+        this.goldEl.classList.remove('bump');
+        void this.goldEl.offsetWidth;
+        this.goldEl.classList.add('bump');
+      };
+    }
+  }
+
+  // ── yeni oyuncu rehberi ──────────────────────────────────
+  private skipTutorial() {
+    setTutorialDone();
+    this.onLeave();
+  }
+
+  private targetEls(target: TutTarget | undefined): HTMLElement[] {
+    switch (target) {
+      case 'melee':
+      case 'ranged':
+      case 'heavy':
+        return [this.unitBtns[target].btn];
+      case 'units':
+        return [this.unitsGroup];
+      case 'stance':
+        return [this.stanceBtn];
+      case 'outpost':
+        return [this.opsRow];
+      case 'slot':
+        return [this.slotsGroup];
+      case 'evolve':
+        return [this.evolveBtn];
+      case 'card':
+        return [this.offerEl];
+      case 'cmd':
+        return [this.cmdBtn];
+      case 'special':
+        return [this.specialBtn];
+      default:
+        return [];
+    }
+  }
+
+  /** Hedef öğeleri parlatır (önceki parlamaları söner). */
+  private highlight(els: HTMLElement[]) {
+    if (els.length === this.hl.length && els.every((e, i) => e === this.hl[i])) return;
+    for (const e of this.hl) e.classList.remove('tut-hl');
+    for (const e of els) e.classList.add('tut-hl');
+    this.hl = els;
+  }
+
+  private hideTip() {
+    this.tipId = '';
+    this.tipBox.el.classList.add('hidden');
+  }
+
+  private updateOnboarding(st: IBattleState, me: IPlayer, playing: boolean) {
+    const tut = st.mode === 'tutorial';
+    // kademeli açılım: eğitimde öğeler tanıtıldıkları adıma kadar gizli
+    const reveal: Record<string, HTMLElement[]> = {
+      units: [this.unitsGroup, this.queueGroup],
+      stance: [this.stanceBtn],
+      outposts: [this.opsRow],
+      slots: [this.slotsGroup],
+      evolve: [this.evolveBtn],
+      cmd: [this.cmdBtn],
+      special: [this.specialBtn],
+    };
+    for (const [key, els] of Object.entries(reveal)) {
+      const hide = tut && st.tut < tutIndex(TUT_REVEAL[key]);
+      for (const e of els) setClass(e, 'tut-hide', hide);
+    }
+
+    // eğitim adımı paneli
+    const step = tut && st.phase === 'playing' && st.tut >= 0 ? TUTORIAL[st.tut] : undefined;
+    setClass(this.coach.el, 'hidden', !step);
+    if (step) {
+      const key = String(st.tut);
+      if (key !== this.coachKey) {
+        this.coachKey = key;
+        setText(this.coach.step, `${st.tut + 1}/${TUTORIAL.length}`);
+        setText(this.coach.title, step.title);
+        setText(this.coach.text, step.text);
+        setClass(this.coach.next, 'hidden', !step.button);
+        if (step.button) setText(this.coach.next, step.button);
+        this.coach.el.classList.remove('pop');
+        void this.coach.el.offsetWidth; // animasyonu yeniden başlat
+        this.coach.el.classList.add('pop');
+        sfx.click();
+      }
+    }
+
+    // gerçek maçlarda bir kerelik ipuçları
+    const now = performance.now();
+    if (this.tipId && now > this.tipUntil) this.hideTip();
+    if (!tut && playing && !this.tipId && now > this.tipGap) {
+      const id = pendingTip(st, me, this.side);
+      const tip = id ? tipDef(id) : undefined;
+      if (id && tip) {
+        markTip(id);
+        this.tipId = id;
+        this.tipUntil = now + 8000;
+        this.tipGap = now + 25000;
+        setText(this.tipBox.text, tip.text);
+        this.tipBox.el.classList.remove('hidden');
+      }
+    }
+    if (!playing && this.tipId) this.hideTip();
+
+    const target = step ? step.target : this.tipId ? tipDef(this.tipId)?.target : undefined;
+    this.highlight(this.targetEls(target));
   }
 
   private fillCard(card: SideCard, p: IPlayer) {
@@ -872,9 +1093,15 @@ export class Hud {
     const phase = st.phase;
     if (phase !== this.lastPhase) {
       if (phase === 'ended' && this.lastPhase) {
-        if (st.winner === this.side) sfx.win();
-        else sfx.lose();
+        // müzik açıksa zafer/yenilgi motifi çalar, değilse kısa efekt sesi
+        const win = st.winner === this.side;
+        if (!music.ended(win)) {
+          if (win) sfx.win();
+          else sfx.lose();
+        }
       }
+      if (phase === 'waiting') music.menu();
+      else if (phase === 'countdown' || (phase === 'playing' && this.lastPhase !== 'countdown')) music.battle(true);
       if (phase === 'playing' && this.lastPhase === 'countdown') {
         sfx.countdown(true);
         this.showBanner('Savaş başladı!', 'good');
@@ -945,6 +1172,27 @@ export class Hud {
       } else {
         o.classList.add('hidden');
       }
+    } else if (phase === 'ended' && st.mode === 'tutorial') {
+      const won = st.winner === this.side;
+      if (won) setTutorialDone();
+      o.append(
+        h(
+          'div',
+          { class: `panel result ${won ? 'won' : 'lost'}` },
+          h('h1', { text: won ? 'EĞİTİM TAMAM!' : 'Eğitim bitti' }),
+          h('p', {
+            text: won
+              ? 'Artık hazırsın! Şimdi kolay bota karşı gerçek bir maç dene. Maç sırasında yeni bir durumla karşılaşınca kısa ipuçları çıkacak.'
+              : 'İstersen eğitimi ana menüden tekrar oynayabilirsin.',
+          }),
+          h(
+            'div',
+            { class: 'row' },
+            h('button', { class: 'btn primary', text: 'Bota Karşı Oyna', onclick: () => this.onPlayBot() }),
+            h('button', { class: 'btn', text: 'Ana menü', onclick: () => this.onLeave() }),
+          ),
+        ),
+      );
     } else if (phase === 'ended') {
       const won = st.winner === this.side;
       const reason = st.reason === 'forfeit' ? (won ? 'Rakip oyunu terk etti.' : 'Oyunu terk ettin.') : won ? 'Rakip kaleyi yıktın!' : 'Kalen yıkıldı.';

@@ -1,0 +1,1433 @@
+-- Dokunmatik arayüz: ana menü, oyun içi göstergeler ve düğmeler, çağ kartı seçimi, kule menüsü,
+-- bekleme / geri sayım / bitiş ekranları, mini harita. Web'deki menu.ts + hud.ts'in karşılığı.
+-- Oyun durumunu net modülünden okur; komutları game.script'e mesajla yollar.
+local net = require("main.net")
+local B = require("shared.balance")
+local U = require("main.util")
+local K = require("main.uikit")
+local sfx = require("main.sfx")
+local music = require("main.music")
+local C = K.C
+local TUT = require("shared.tutorial_data")
+
+local GAME = msg.url("main:/game#script")
+local VIEW_H = 720
+local SAVE = sys.get_save_file("golem_cephesi", "ayarlar")
+local H_TOUCH = hash("touch")
+local H_TEXT = hash("text")
+local H_MARKED = hash("marked_text")
+local H_BACKSPACE = hash("backspace")
+local H_ENTER = hash("enter")
+local H_BACK = hash("back")
+local LEVELS = { { "easy", "Kolay" }, { "normal", "Normal" }, { "hard", "Zor" } }
+local CAT_COLOR = { ordu = 0xd8743a, ekonomi = 0xe0b43a, savunma = 0x3a8fd8, ["güç"] = 0x9a5ae0 }
+local CAT_LABEL = { ordu = "ORDU", ekonomi = "EKONOMİ", savunma = "SAVUNMA", ["güç"] = "GÜÇ" }
+local SOURCE_COLOR = { gold = 0xffd34d, fury = 0xff8a5a, heal = 0x8dff9a }
+local WORLD_MIN, WORLD_MAX = -170, B.WORLD_W + 170
+local MM_DOTS = 64
+
+local function send(t, p) msg.post(GAME, "send", { t = t, p = p or {} }) end
+
+local function list(arr)
+	local out = {}
+	if arr then arr:each(function(v) out[#out + 1] = v end) end
+	return out
+end
+
+--- Güvenli alan (çentik, yuvarlak köşe, ana ekran çubuğu) piksel cinsinden: sol, sağ, üst, alt.
+--- Eklenti yoksa ya da cihaz desteklemiyorsa (web, eski Android) sıfır.
+local function safe_insets()
+	if not safearea then return 0, 0, 0, 0 end
+	local ok, ins, status = pcall(safearea.get_insets)
+	if not ok or status ~= safearea.STATUS_OK or not ins then return 0, 0, 0, 0 end
+	return ins.left or 0, ins.right or 0, ins.top or 0, ins.bottom or 0
+end
+
+local function screen_w()
+	local w, h = window.get_size()
+	if h <= 0 then return 1280 end
+	return w / h * VIEW_H
+end
+
+-- ── kurulum ──────────────────────────────────────────────
+local function build_top(self)
+	local ui, VW, VH = self.ui, self.VW, self.VH
+	local g = self.g.hud
+	local T = function(y) return VH - y end
+	local function side_card(x, align)
+		local c = {}
+		ui.box(x, T(50), 340, 88, { parent = g, color = C.panel })
+		local l, r = x - 156, x + 156
+		c.name = ui.text(align == "l" and l or r, T(22), "", { size = 21, parent = g, pivot = align == "l" and gui.PIVOT_W or gui.PIVOT_E })
+		c.tier = ui.text(align == "l" and r or l, T(22), "", { size = 17, parent = g, color = C.gold, pivot = align == "l" and gui.PIVOT_E or gui.PIVOT_W })
+		ui.box(x, T(48), 316, 20, { parent = g, color = C.black, slice = 8 })
+		c.fill = ui.box(x - 156, T(48), 312, 16, { parent = g, color = C.good, tex = "ui_white", pivot = gui.PIVOT_W })
+		c.hp = ui.text(x, T(48), "", { size = 15, parent = g })
+		c.chips = {}
+		for i = 1, 10 do
+			local cx2 = align == "l" and (l + 11 + (i - 1) * 25) or (r - 11 - (i - 1) * 25)
+			local ic = ui.icon(cx2, T(77), 23, "icon_card_foundry", g)
+			gui.set_enabled(ic, false)
+			c.chips[i] = ic
+		end
+		return c
+	end
+	self.me = side_card(186, "l")
+	self.foe = side_card(VW - 186, "r")
+
+	-- orta: süre, mini harita, karakol noktaları, kaynak
+	self.timer = ui.text(VW / 2, T(20), "0:00", { size = 24, parent = g })
+	local mmw = math.min(520, VW - 2 * 372)
+	self.mm = { x0 = VW / 2 - mmw / 2, w = mmw, y = T(58), h = 40 }
+	ui.button("minimap", VW / 2, T(58), mmw, 44, function() end, { parent = g, color = C.panel })
+	local mm = self.mm
+	local function X(x) return mm.x0 + (x - WORLD_MIN) / (WORLD_MAX - WORLD_MIN) * mm.w end
+	mm.X = X
+	ui.box(VW / 2, T(70), mmw - 8, 3, { parent = g, color = vmath.vector4(1, 1, 1, 0.12), slice = 1 })
+	ui.box((X(-40) + X(B.BASE_FRONT)) / 2, T(62), X(B.BASE_FRONT) - X(-40), 18, { parent = g, color = C.ally, slice = 4 })
+	ui.box((X(B.WORLD_W - B.BASE_FRONT) + X(B.WORLD_W + 40)) / 2, T(62), X(B.WORLD_W + 40) - X(B.WORLD_W - B.BASE_FRONT), 18, { parent = g, color = C.foe, slice = 4 })
+	mm.flags = {}
+	for i = 1, #B.OUTPOST_XS do
+		mm.flags[i] = ui.icon(X(B.OUTPOST_XS[i]), T(52), 20, "ui_flag", g)
+	end
+	mm.src = ui.icon(X(1000), T(48), 14, "ui_diamond", g)
+	mm.dots = {}
+	for i = 1, MM_DOTS do
+		local d = ui.icon(0, T(70), 8, "ui_circle", g)
+		gui.set_enabled(d, false)
+		mm.dots[i] = d
+	end
+	mm.cam = ui.box(VW / 2, T(58), 100, 42, { parent = g, tex = "ui_frame", color = vmath.vector4(1, 1, 1, 0.85), slice = 12 })
+
+	self.ops = {}
+	for s = 0, #B.OUTPOST_XS - 1 do
+		local x = VW / 2 + (s - 1) * 128
+		local b = ui.button("op" .. s, x, T(104), 120, 40, function() self:op_action(s) end, { parent = self.sec.ops, color = C.btn })
+		b.label = ui.text(x, T(104), "", { size = 15, parent = self.sec.ops })
+		self.ops[s] = b
+	end
+	self.src_icon = ui.icon(VW / 2 - 132, T(136), 26, "icon_src_gold", g)
+	self.src_text = ui.text(VW / 2 - 114, T(136), "", { size = 16, parent = g, pivot = gui.PIVOT_W })
+
+	-- kaynaklar
+	ui.icon(34, T(116), 30, "ui_coin", g)
+	self.gold = ui.text(56, T(116), "0", { size = 30, parent = g, color = C.gold, pivot = gui.PIVOT_W })
+	self.income = ui.text(20, T(144), "", { size = 15, parent = g, color = C.dim, pivot = gui.PIVOT_W, font = "small" })
+	self.fury = ui.text(190, T(116), "", { size = 18, parent = g, color = U.rgb(0xff8a5a), pivot = gui.PIVOT_W })
+
+	-- çıkış
+	ui.button("leave", VW - 44, T(118), 64, 40, function() self:ask_leave() end, { parent = g, label = "Çık", size = 18, color = U.rgb(0x5e2a2a) })
+	self.mute_btn = ui.button("mute", VW - 128, T(118), 92, 40, function() self:toggle_mute() end, { parent = g, label = "", size = 16 })
+	self.music_btn = ui.button("music", VW - 216, T(118), 76, 40, function() self:toggle_music() end, { parent = g, label = "Müzik", size = 16 })
+end
+
+local function build_bottom(self)
+	local ui, VW = self.ui, self.VW
+	local g = self.g.hud
+	-- birim düğmeleri
+	g = self.sec.units
+	self.units = {}
+	for i, arch in ipairs(B.ARCHES) do
+		local x = 70 + (i - 1) * 116
+		local b = ui.button("u_" .. arch, x, 62, 108, 100, function() send("train", { arch = arch }) end, { parent = g })
+		b.icon = ui.icon(x, 76, 66, "icon_u_0_" .. arch, g)
+		ui.icon(x - 26, 22, 18, "ui_coin", g)
+		b.cost = ui.text(x - 14, 22, "", { size = 18, parent = g, color = C.gold, pivot = gui.PIVOT_W })
+		self.units[arch] = b
+	end
+	-- üretim kuyruğu
+	g = self.sec.queue
+	self.queue = {}
+	for i = 0, B.MAX_QUEUE - 1 do
+		local x = 38 + i * 50
+		local b = ui.button("q" .. i, x, 140, 44, 44, function() send("cancel", { index = i }) end, { parent = g, color = C.panel })
+		b.icon = ui.icon(x, 142, 38, "icon_u_0_melee", g)
+		b.prog = ui.box(x - 20, 122, 40, 5, { parent = g, color = C.gold, tex = "ui_white", pivot = gui.PIVOT_W })
+		self.queue[i] = b
+	end
+	-- duruş
+	g = self.sec.stance
+	self.stance = ui.button("stance", 424, 62, 104, 100, function() self:toggle_stance() end, { parent = g })
+	self.stance.label = ui.text(424, 74, "", { size = 22, parent = g })
+	self.stance.hint = ui.text(424, 40, "", { size = 13, parent = g, color = C.dim, font = "small", width = 96 })
+	-- kule yuvaları
+	g = self.sec.slots
+	self.slots = {}
+	for s = 0, B.MAX_SLOTS - 1 do
+		local x = 530 + s * 98
+		local b = ui.button("slot" .. s, x, 62, 92, 100, function() self:slot_action(s) end, { parent = g })
+		b.icon = ui.icon(x, 80, 56, "icon_tur_0_1", g)
+		b.label = ui.text(x, 38, "", { size = 13, parent = g, font = "small", width = 88 })
+		b.cost = ui.text(x, 20, "", { size = 15, parent = g, color = C.gold })
+		self.slots[s] = b
+	end
+	-- komutan
+	g = self.sec.cmd
+	local cx = VW - 332
+	self.cmd = ui.button("cmd", cx, 62, 100, 100, function() send("cmd_skill") end, { parent = g })
+	self.cmd.icon = ui.icon(cx, 74, 70, "icon_cmd_0", g)
+	self.cmd.pie = gui.new_pie_node(vmath.vector3(cx, 62, 0), vmath.vector3(100, 100, 0))
+	ui.attach(self.cmd.pie, g)
+	gui.set_color(self.cmd.pie, vmath.vector4(0.04, 0.05, 0.11, 0.72))
+	gui.set_outer_bounds(self.cmd.pie, gui.PIEBOUNDS_RECTANGLE)
+	gui.set_euler(self.cmd.pie, vmath.vector3(0, 0, 90))
+	self.cmd.cd = ui.text(cx, 70, "", { size = 30, parent = g })
+	ui.box(cx, 24, 84, 8, { parent = g, color = C.black, slice = 3 })
+	self.cmd.hpfill = ui.box(cx - 40, 24, 80, 5, { parent = g, color = C.good, tex = "ui_white", pivot = gui.PIVOT_W })
+	self.cmd.name = ui.text(cx, 10, "", { size = 12, parent = g, font = "small" })
+	-- özel güç
+	g = self.sec.special
+	local sx = VW - 224
+	self.special = ui.button("special", sx, 62, 100, 100, function() send("special") end, { parent = g })
+	self.special.icon = ui.icon(sx, 72, 64, "icon_spec_0", g)
+	self.special.pie = gui.new_pie_node(vmath.vector3(sx, 62, 0), vmath.vector3(100, 100, 0))
+	ui.attach(self.special.pie, g)
+	gui.set_color(self.special.pie, vmath.vector4(0.04, 0.05, 0.11, 0.72))
+	gui.set_outer_bounds(self.special.pie, gui.PIEBOUNDS_RECTANGLE)
+	gui.set_euler(self.special.pie, vmath.vector3(0, 0, 90))
+	self.special.cd = ui.text(sx, 70, "", { size = 30, parent = g })
+	self.special.name = ui.text(sx, 20, "", { size = 12, parent = g, font = "small", width = 96 })
+	-- kademe
+	g = self.sec.evolve
+	local ex = VW - 91
+	self.evolve = ui.button("evolve", ex, 62, 150, 100, function() send("evolve") end, { parent = g })
+	self.evolve.fill = ui.box(ex - 75, 62, 150, 100, { parent = g, color = U.rgb(0x5e9a3a, 0.55), tex = "ui_white", pivot = gui.PIVOT_W })
+	self.evolve.title = ui.text(ex, 82, "", { size = 18, parent = g, width = 140 })
+	self.evolve.xp = ui.text(ex, 44, "", { size = 14, parent = g, color = C.dim, font = "small" })
+	self.evolve.hint = ui.text(ex, 24, "Yükselt", { size = 13, parent = g, color = C.gold })
+end
+
+local function build_offer(self)
+	local ui, VW, VH = self.ui, self.VW, self.VH
+	local g = self.g.offer
+	ui.box(VW / 2, VH / 2 + 40, 920, 270, { parent = g, color = U.rgb(0x0b1020, 0.88) })
+	self.offer_title = ui.text(VW / 2, VH / 2 + 150, "", { size = 26, parent = g, color = C.gold })
+	self.cards = {}
+	for i = 1, B.CARD_OFFER do
+		local x = VW / 2 + (i - 2) * 296
+		local y = VH / 2 + 30
+		local b = ui.button("card" .. i, x, y, 280, 190, function() self:pick_card(i) end, { parent = g, color = U.rgb(0x1e2a48) })
+		b.strip = ui.box(x, y + 86, 270, 10, { parent = g, color = C.gold, slice = 4 })
+		b.icon = ui.icon(x, y + 48, 56, "icon_card_foundry", g)
+		b.name = ui.text(x, y + 6, "", { size = 21, parent = g, width = 260 })
+		b.desc = ui.text(x, y - 40, "", { size = 14, parent = g, font = "small", width = 250, color = U.rgb(0xdfe6f5) })
+		b.cat = ui.text(x, y - 80, "", { size = 12, parent = g, color = C.dim })
+		self.cards[i] = b
+	end
+end
+
+local function build_picker(self)
+	local ui = self.ui
+	local g = self.g.picker
+	self.picker = { panel = ui.box(0, 0, 360, 380, { parent = g, color = U.rgb(0x0b1020, 0.94) }) }
+	self.picker.title = ui.text(0, 0, "", { size = 18, parent = g, color = C.gold })
+	self.picker.opts = {}
+	for gr = 0, B.TURRET_GRADE_COUNT - 1 do
+		local b = ui.button("pick" .. gr, 0, 0, 340, 84, function() self:pick_turret(gr) end, { parent = g, color = U.rgb(0x1e2a48) })
+		b.icon = ui.icon(0, 0, 60, "icon_tur_0_0", g)
+		b.name = ui.text(0, 0, "", { size = 18, parent = g, pivot = gui.PIVOT_W })
+		b.desc = ui.text(0, 0, "", { size = 12, parent = g, font = "small", pivot = gui.PIVOT_W, color = U.rgb(0xdfe6f5) })
+		b.stats = ui.text(0, 0, "", { size = 11, parent = g, font = "small", pivot = gui.PIVOT_W, color = C.dim })
+		b.cost = ui.text(0, 0, "", { size = 18, parent = g, color = C.gold, pivot = gui.PIVOT_E })
+		self.picker.opts[gr] = b
+	end
+	self.picker.sell = ui.button("sell", 0, 0, 340, 44, function() self:sell_turret() end, { parent = g, color = U.rgb(0x5e2a2a), label = "Sat", size = 18 })
+end
+
+local function build_menu(self)
+	local ui, VW, VH = self.ui, self.VW, self.VH
+	local g = self.g.menu
+	local cx, cy = VW / 2, VH / 2
+	ui.box(cx, cy, 560, 700, { parent = g, color = U.rgb(0x0b1020, 0.86) })
+	ui.text(cx, cy + 300, "GOLEM", { size = 56, font = "big", parent = g, color = C.gold })
+	ui.text(cx, cy + 254, "CEPHESİ", { size = 38, font = "big", parent = g, color = U.rgb(0xffe9a8) })
+	ui.text(cx, cy + 216, "Dökümhaneni yükselt, golem ordunu sür, rakip kaleyi yık.", { size = 15, parent = g, font = "small", color = C.dim })
+	-- ad
+	ui.text(cx - 240, cy + 172, "Adın", { size = 16, parent = g, pivot = gui.PIVOT_W, color = C.dim })
+	self.name_btn = ui.button("name", cx + 40, cy + 172, 400, 46, function() self:edit("name") end, { parent = g, modal = "menu", color = U.rgb(0x1a2238) })
+	self.name_text = ui.text(cx + 40, cy + 172, "", { size = 20, parent = g })
+	-- eğitim (ilk kez oynayana önerilir)
+	self.tut_btn = ui.button("tutorial", cx, cy + 112, 500, 56, function() self:join({ mode = "tutorial" }) end, { parent = g, modal = "menu", label = "Eğitimle Başla", size = 24 })
+	self.tut_hint = ui.text(cx, cy + 74, "İlk kez mi oynuyorsun? 3-4 dakikalık rehberli maç her şeyi gösterir.", { size = 14, parent = g, font = "small", color = C.dim })
+	-- bota karşı
+	self.bot_btn = ui.button("bot", cx, cy + 26, 500, 56, function() self:join({ mode = "bot", level = self.level }) end, { parent = g, modal = "menu", color = U.rgb(0x2f7a3a), label = "Bota Karşı Oyna", size = 24 })
+	self.level_btns = {}
+	for i, lv in ipairs(LEVELS) do
+		local x = cx + (i - 2) * 168
+		local b = ui.button("lv_" .. lv[1], x, cy - 26, 160, 40, function()
+			self.level = lv[1]
+			self:save()
+			self:refresh_menu()
+		end, { parent = g, modal = "menu", label = lv[2], size = 18 })
+		self.level_btns[lv[1]] = b
+	end
+	ui.button("quick", cx, cy - 82, 500, 52, function() self:join({ mode = "quick" }) end, { parent = g, modal = "menu", label = "Hızlı Eşleşme", size = 22 })
+	ui.text(cx, cy - 122, "arkadaşınla", { size = 15, parent = g, color = C.dim, font = "small" })
+	ui.button("create", cx, cy - 162, 500, 50, function() self:join({ mode = "private" }) end, { parent = g, modal = "menu", label = "Oda Kur", size = 22 })
+	self.code_btn = ui.button("code", cx - 76, cy - 222, 240, 50, function() self:edit("code") end, { parent = g, modal = "menu", color = U.rgb(0x1a2238) })
+	self.code_text = ui.text(cx - 76, cy - 222, "", { size = 24, parent = g })
+	ui.button("join", cx + 172, cy - 222, 156, 50, function()
+		if #self.code == 4 then self:join({ mode = "join", code = self.code }) else self:edit("code") end
+	end, { parent = g, modal = "menu", label = "Katıl", size = 22 })
+	ui.text(cx, cy - 282, "Golemler kendiliğinden yürür. Ekranı sürükleyerek haritada gezin.", { size = 13, parent = g, font = "small", color = C.dim, width = 520 })
+	ui.text(VW - 12, 14, "Mobil prototip v0.1", { size = 12, parent = g, font = "small", color = C.dim, pivot = gui.PIVOT_E })
+	-- müzik künyesi (menü teması CC-BY 3.0, diğerleri CC0; ayrıntı README'de)
+	ui.text(VW - 12, 32, "Müzik: HitCtrl (CC-BY 3.0) · Emma_MA, cynicmusic, Robin Lamb (CC0) · OpenGameArt", { size = 12, parent = g, font = "small", color = C.dim, pivot = gui.PIVOT_E })
+	self.menu_mute = ui.button("menu_mute", 92, 32, 160, 42, function() self:toggle_mute() end, { parent = g, modal = "menu", label = "", size = 16 })
+	self.menu_music = ui.button("menu_music", 262, 32, 160, 42, function() self:toggle_music() end, { parent = g, modal = "menu", label = "", size = 16 })
+end
+
+-- Rehber: eğitim adımı paneli, hedefi gösteren parlayan çerçeve, bir kerelik ipucu balonu.
+local function build_guide(self)
+	local ui, VW, VH = self.ui, self.VW, self.VH
+	local g = self.g.guide
+	self.hl = ui.box(0, 0, 100, 100, { parent = g, tex = "ui_frame", color = C.gold, slice = 14 })
+	gui.set_enabled(self.hl, false)
+	gui.animate(self.hl, "color.w", 0.25, gui.EASING_INOUTSINE, 0.55, 0, nil, gui.PLAYBACK_LOOP_PINGPONG)
+	-- eğitim paneli (üst göstergelerin ve duyurunun altında)
+	local cy = VH - 292
+	local cg = ui.group(g)
+	self.coach = { group = cg }
+	ui.box(VW / 2, cy, 660, 124, { parent = cg, color = U.rgb(0x0a0e1e, 0.94) })
+	ui.box(VW / 2, cy, 660, 124, { parent = cg, tex = "ui_frame", color = C.gold, slice = 14 })
+	self.coach.title = ui.text(VW / 2 - 312, cy + 38, "", { size = 21, parent = cg, color = C.gold, pivot = gui.PIVOT_W })
+	self.coach.step = ui.text(VW / 2 + 312, cy + 40, "", { size = 14, parent = cg, color = C.dim, pivot = gui.PIVOT_E, font = "small" })
+	self.coach.text = ui.text(VW / 2 - 312, cy - 14, "", { size = 15, parent = cg, font = "small", pivot = gui.PIVOT_W, width = 470 })
+	self.coach.next = ui.button("tut_next", VW / 2 + 252, cy + 2, 130, 40, function() send("tut_next") end, { parent = cg, label = "Devam", size = 18, color = U.rgb(0x2f7a3a) })
+	self.coach.skip = ui.button("tut_skip", VW / 2 + 252, cy - 40, 130, 32, function() self:skip_tutorial() end, { parent = cg, label = "Eğitimi geç", size = 14, color = U.rgb(0x3a3f55) })
+	gui.set_enabled(cg, false)
+	-- ipucu balonu (alt çubuğun üstünde)
+	local tg = ui.group(g)
+	self.tip = { group = tg }
+	ui.box(VW / 2, 200, 660, 66, { parent = tg, color = U.rgb(0x0a0e1e, 0.92) })
+	ui.box(VW / 2 - 326, 200, 8, 56, { parent = tg, color = C.gold, tex = "ui_white" })
+	self.tip.text = ui.text(VW / 2 - 310, 200, "", { size = 15, parent = tg, font = "small", pivot = gui.PIVOT_W, width = 480 })
+	ui.button("tip_ok", VW / 2 + 262, 200, 110, 44, function() self:hide_tip() end, { parent = tg, label = "Tamam", size = 17 })
+	gui.set_enabled(tg, false)
+end
+
+local function build_confirm(self)
+	local ui, VW, VH = self.ui, self.VW, self.VH
+	local g = self.g.confirm
+	ui.box(VW / 2, VH / 2, VW + 40, VH + 40, { parent = g, color = vmath.vector4(0, 0, 0, 0.5), slice = 1 })
+	ui.box(VW / 2, VH / 2, 520, 220, { parent = g, color = U.rgb(0x0b1020, 0.95) })
+	ui.text(VW / 2, VH / 2 + 56, "Maçtan çıkarsan yenilmiş sayılırsın.", { size = 20, parent = g, width = 480 })
+	ui.text(VW / 2, VH / 2 + 20, "Emin misin?", { size = 18, parent = g, color = C.dim })
+	ui.button("conf_yes", VW / 2 - 110, VH / 2 - 50, 200, 56, function()
+		self.confirm = false
+		msg.post(GAME, "leave")
+	end, { parent = g, modal = "confirm", label = "Çık", size = 22, color = U.rgb(0x8a2f2f) })
+	ui.button("conf_no", VW / 2 + 110, VH / 2 - 50, 200, 56, function() self.confirm = false end, { parent = g, modal = "confirm", label = "Vazgeç", size = 22 })
+end
+
+local function build(self)
+	if self.ui then gui.delete_node(self.ui.root) end
+	-- arayüz güvenli alanın içinde kurulur (savaş alanı yine tüm ekranı kaplar)
+	local l, r, t, b = safe_insets()
+	self.inset_px = l .. "," .. r .. "," .. t .. "," .. b
+	local _, wh = window.get_size()
+	local k = VIEW_H / math.max(1, wh)
+	self.inset = { l = l * k, r = r * k, t = t * k, b = b * k }
+	self.W = screen_w()
+	local W = self.W - self.inset.l - self.inset.r
+	local H = VIEW_H - self.inset.t - self.inset.b
+	self.S = math.min(1, W / 1280, H / VIEW_H)
+	self.VW = W / self.S
+	self.VH = H / self.S
+	self.ui = K.new(self.S, self.inset.l, self.inset.b)
+	local ui = self.ui
+	self.g = {}
+	self.g.hud = ui.group()
+	-- kademeli açılım için bölümler (eğitimde tanıtılana kadar gizli)
+	self.sec = {}
+	for _, k in ipairs({ "units", "queue", "stance", "ops", "slots", "cmd", "special", "evolve" }) do self.sec[k] = ui.group(self.g.hud) end
+	self.g.guide = ui.group()
+	self.g.offer = ui.group()
+	self.g.picker = ui.group()
+	self.g.overlay = ui.group()
+	self.g.confirm = ui.group()
+	self.g.menu = ui.group()
+	build_top(self)
+	build_bottom(self)
+	build_offer(self)
+	build_picker(self)
+	build_confirm(self)
+	build_guide(self)
+	build_menu(self)
+	-- duyuru ve uyarı
+	-- duyuru üst göstergelerin hemen altında (kart seçimiyle çakışmasın)
+	self.banner_box = ui.box(self.VW / 2, self.VH - 182, 600, 50, { color = U.rgb(0x0b1020, 0.8) })
+	self.banner = ui.text(self.VW / 2, self.VH - 182, "", { size = 24 })
+	self.toast_box = ui.box(self.VW / 2, 190, 640, 50, { color = U.rgb(0x5e1f1f, 0.92) })
+	self.toast = ui.text(self.VW / 2, 190, "", { size = 18, width = 600 })
+	self.overlay_key = ""
+	self.offer_key = nil
+	self.last_tier = -1
+	self.overlay_group = nil
+	self.coach_key = nil
+	self.tip_id = nil
+	gui.set_enabled(self.banner_box, false)
+	gui.set_enabled(self.banner, false)
+	gui.set_enabled(self.toast_box, false)
+	gui.set_enabled(self.toast, false)
+	self:refresh_menu()
+	self:refresh_mute()
+	self:show_screen(self.screen)
+end
+
+-- ── davranışlar ──────────────────────────────────────────
+local Ui = {}
+
+function Ui.save(self)
+	sys.save(SAVE, { name = self.name, level = self.level, tut_done = self.tut_done, tips = self.tips_seen, muted = self.muted, music_off = self.music_off })
+end
+
+function Ui.toggle_mute(self)
+	self.muted = not self.muted
+	sfx.muted = self.muted
+	self:save()
+	self:refresh_mute()
+end
+
+function Ui.toggle_music(self)
+	self.music_off = not self.music_off
+	music.set_off(self.music_off)
+	self:save()
+	self:refresh_mute()
+end
+
+function Ui.refresh_mute(self)
+	local label = self.muted and "Ses kapalı" or "Ses açık"
+	self.ui.set_text(self.mute_btn.label, self.muted and "Sessiz" or "Ses")
+	self.ui.set_text(self.menu_mute.label, label)
+	self.ui.set_text(self.menu_music.label, self.music_off and "Müzik kapalı" or "Müzik açık")
+	gui.set_color(self.music_btn.label, self.music_off and C.dim or C.white)
+end
+
+--- Eğitimi geç (ya da eğitimde "Çık"): bir daha önerilmez.
+function Ui.skip_tutorial(self)
+	self.tut_done = true
+	self:save()
+	msg.post(GAME, "leave")
+end
+
+--- Eğitim bitince: kolay bota karşı ilk gerçek maç.
+function Ui.play_bot(self)
+	msg.post(GAME, "leave")
+	self.busy = false
+	self:join({ mode = "bot", level = "easy" })
+end
+
+--- Öldürülen düşmanın yerinden altın sayacına uçan sikkeler (x, y: arayüz düzleminde).
+function Ui.fly_coins(self, x, y, n)
+	if self.screen ~= "game" then return end
+	self.flying = self.flying or 0
+	local ui = self.ui
+	local vx, vy = (x - self.inset.l) / self.S, (y - self.inset.b) / self.S
+	local tx, ty = 34, self.VH - 116
+	for i = 1, n do
+		if self.flying >= 14 then return end
+		self.flying = self.flying + 1
+		local c = ui.icon(vx + (math.random() * 2 - 1) * 10, vy + (math.random() * 2 - 1) * 8, 20, "ui_coin", self.g.guide)
+		gui.set_scale(c, vmath.vector3(0.4, 0.4, 1))
+		-- önce hafifçe havaya fırlar, sonra sayaca süzülür
+		local up = gui.get_position(c) + vmath.vector3((math.random() * 2 - 1) * 18, 30 + math.random() * 25, 0)
+		gui.animate(c, "scale", vmath.vector3(1, 1, 1), gui.EASING_OUTQUAD, 0.16, (i - 1) * 0.05)
+		gui.animate(c, "position", up, gui.EASING_OUTQUAD, 0.16, (i - 1) * 0.05, function()
+			gui.animate(c, "scale", vmath.vector3(0.55, 0.55, 1), gui.EASING_INQUAD, 0.46 + i * 0.07)
+			gui.animate(c, "position", vmath.vector3(tx, ty, 0), gui.EASING_INQUAD, 0.46 + i * 0.07, 0, function()
+				gui.delete_node(c)
+				self.flying = self.flying - 1
+				gui.cancel_animation(self.gold, "scale")
+				gui.set_scale(self.gold, vmath.vector3(1, 1, 1))
+				gui.animate(self.gold, "scale", vmath.vector3(1.22, 1.22, 1), gui.EASING_OUTQUAD, 0.09, 0, nil, gui.PLAYBACK_ONCE_PINGPONG)
+			end)
+		end)
+	end
+end
+
+function Ui.hide_tip(self)
+	self.tip_id = nil
+	if self.tip then gui.set_enabled(self.tip.group, false) end
+end
+
+function Ui.refresh_menu(self)
+	local ui = self.ui
+	-- telefon klavyesinin henüz onaylanmamış (oluşturulan) metni de gösterilir
+	local marked = self.marked or ""
+	local marked_code = (string.upper(marked):gsub("[^A-Z]", ""))
+	ui.set_text(self.name_text, self.name .. (self.editing == "name" and (marked .. "|") or ""))
+	ui.set_text(self.code_text, (self.code == "" and self.editing ~= "code") and "KOD" or (self.code .. (self.editing == "code" and (marked_code .. "|") or "")))
+	gui.set_color(self.code_text, (self.code == "" and self.editing ~= "code") and C.dim or C.white)
+	for id, b in pairs(self.level_btns) do ui.recolor(b, id == self.level and U.rgb(0x2f7a3a) or C.btn) end
+	-- eğitim bitmediyse öne çıkar
+	ui.recolor(self.tut_btn, self.tut_done and C.btn or U.rgb(0xc98a12))
+	ui.set_text(self.tut_btn.label, self.tut_done and "Eğitimi tekrar oyna" or "Eğitimle Başla")
+	gui.set_enabled(self.tut_hint, not self.tut_done)
+	ui.recolor(self.bot_btn, self.tut_done and U.rgb(0x2f7a3a) or C.btn)
+	ui.recolor(self.name_btn, self.editing == "name" and U.rgb(0x2a3a66) or U.rgb(0x1a2238))
+	ui.recolor(self.code_btn, self.editing == "code" and U.rgb(0x2a3a66) or U.rgb(0x1a2238))
+	for _, b in ipairs(ui.buttons) do
+		if b.modal == "menu" then ui.enable(b, not self.busy) end
+	end
+end
+
+function Ui.edit(self, what)
+	self.editing = what
+	gui.show_keyboard(gui.KEYBOARD_TYPE_DEFAULT, false)
+	self:refresh_menu()
+end
+
+function Ui.stop_edit(self)
+	if not self.editing then return end
+	self.marked = nil
+	if self.editing == "name" then
+		self.name = self.name:gsub("^%s+", ""):gsub("%s+$", "")
+		if self.name == "" then self.name = "Simyacı" end
+		self:save()
+	end
+	self.editing = nil
+	gui.hide_keyboard()
+	self:refresh_menu()
+end
+
+function Ui.join(self, opts)
+	if self.busy then return end
+	self:stop_edit()
+	self.busy = true
+	self:refresh_menu()
+	opts.name = self.name
+	msg.post(GAME, "join", opts)
+end
+
+function Ui.show_screen(self, screen)
+	self.screen = screen
+	gui.set_enabled(self.g.menu, screen == "menu")
+	gui.set_enabled(self.g.hud, screen == "game")
+	gui.set_enabled(self.g.offer, false)
+	gui.set_enabled(self.g.picker, false)
+	gui.set_enabled(self.g.overlay, screen == "game")
+	gui.set_enabled(self.g.confirm, false)
+	self.picker_slot = -1
+	self.confirm = false
+end
+
+function Ui.show_banner(self, text, kind)
+	self.ui.set_text(self.banner, text)
+	gui.set_color(self.banner, kind == "warn" and U.rgb(0xffb08a) or U.rgb(0xb8ffc6))
+	gui.set_enabled(self.banner_box, true)
+	gui.set_enabled(self.banner, true)
+	-- yazı genişliği yaklaşık: karakter başına ~0.52 em
+	gui.set_size(self.banner_box, vmath.vector3(math.min(self.VW - 40, K.utf8_len(text) * 24 * 0.52 + 70), 50, 0))
+	self.banner_t = 2.2
+end
+
+function Ui.show_toast(self, text)
+	self.ui.set_text(self.toast, text)
+	gui.set_enabled(self.toast_box, true)
+	gui.set_enabled(self.toast, true)
+	self.toast_t = 3.5
+end
+
+function Ui.ask_leave(self)
+	local st = net.state()
+	if st and st.mode == "tutorial" then return self:skip_tutorial() end
+	if st and (st.phase == "playing" or st.phase == "countdown") then
+		self.confirm = true
+	else
+		msg.post(GAME, "leave")
+	end
+end
+
+function Ui.toggle_stance(self)
+	local me = net.players()
+	if me then send("stance", { stance = me.stance == "hold" and "attack" or "hold" }) end
+end
+
+--- Ekrandaki sıra (0 = bana en yakın) → dünyadaki nokta indeksi
+function Ui.op_index(self, s)
+	return net.side == 0 and s or #B.OUTPOST_XS - 1 - s
+end
+
+function Ui.op_action(self, s)
+	send("outpost_build", { index = self:op_index(s) })
+end
+
+function Ui.pick_card(self, i)
+	local me = net.players()
+	if not me or me.picks <= 0 then return end
+	local id = me.offer[i]
+	if id then send("card_pick", { id = id }) end
+end
+
+function Ui.slot_action(self, s)
+	local me = net.players()
+	if not me then return end
+	local n = me.turrets:length()
+	if s >= n then
+		if s == n then send("slot_buy") end
+		return
+	end
+	if self.picker_slot == s then self.picker_slot = -1 else self.picker_slot = s end
+	self.picker_key = nil
+end
+
+function Ui.pick_turret(self, grade)
+	local me = net.players()
+	if not me or self.picker_slot < 0 then return end
+	local t = me.turrets[self.picker_slot + 1]
+	if not t then return end
+	if t.tier < 0 then
+		send("turret_buy", { slot = self.picker_slot, grade = grade })
+	else
+		send("turret_upgrade", { slot = self.picker_slot, grade = grade })
+	end
+	self.picker_slot = -1
+end
+
+function Ui.sell_turret(self)
+	if self.picker_slot >= 0 then send("turret_sell", { slot = self.picker_slot }) end
+	self.picker_slot = -1
+end
+
+-- ── güncelleme ───────────────────────────────────────────
+local function fill_card(self, c, p)
+	local ui = self.ui
+	ui.set_text(c.name, p.name .. (p.isBot and " (bot)" or "") .. ((not p.connected and not p.isBot) and " (bağlantı yok)" or ""))
+	ui.set_text(c.tier, B.tier(p.tier).name)
+	local k = p.baseMaxHp > 0 and math.max(0, p.baseHp / p.baseMaxHp) or 0
+	gui.set_size(c.fill, vmath.vector3(math.max(1, 312 * k), 16, 0))
+	gui.set_color(c.fill, k < 0.3 and C.bad or C.good)
+	ui.set_text(c.hp, math.ceil(p.baseHp) .. " / " .. math.floor(p.baseMaxHp + 0.5))
+	local ids = list(p.cards)
+	local key = table.concat(ids, ",")
+	if c.chip_key ~= key then
+		c.chip_key = key
+		for i, ic in ipairs(c.chips) do
+			local id = ids[i]
+			gui.set_enabled(ic, id ~= nil)
+			if id then gui.play_flipbook(ic, "icon_card_" .. id) end
+		end
+	end
+end
+
+local function update_offer(self, me, playing)
+	local ids = (me.picks > 0) and list(me.offer) or {}
+	local key = playing and table.concat(ids, ",") or ""
+	if key == self.offer_key then return end
+	self.offer_key = key
+	gui.set_enabled(self.g.offer, key ~= "")
+	if key == "" then return end
+	sfx.play("evolve")
+	self.ui.set_text(self.offer_title, "Çağ kartı seç" .. (me.picks > 1 and (" (" .. me.picks .. " hak)") or ""))
+	for i = 1, B.CARD_OFFER do
+		local b = self.cards[i]
+		local c = B.card_def(ids[i] or "")
+		gui.set_enabled(b.node, c ~= nil)
+		for _, n in ipairs({ b.strip, b.icon, b.name, b.desc, b.cat }) do gui.set_enabled(n, c ~= nil) end
+		if c then
+			self.ui.set_text(b.name, c.name)
+			self.ui.set_text(b.desc, c.desc)
+			self.ui.set_text(b.cat, CAT_LABEL[c.cat] or c.cat)
+			gui.set_color(b.strip, U.rgb(CAT_COLOR[c.cat] or 0xffffff))
+			gui.play_flipbook(b.icon, "icon_card_" .. c.id)
+		end
+	end
+end
+
+local function update_picker(self, me, playing)
+	local open = self.picker_slot >= 0 and playing and self.screen == "game"
+	local t = open and me.turrets[self.picker_slot + 1] or nil
+	if not t then
+		self.picker_slot = -1
+		gui.set_enabled(self.g.picker, false)
+		return
+	end
+	gui.set_enabled(self.g.picker, true)
+	local ui = self.ui
+	local p = self.picker
+	local px = U.clamp(self.slots[self.picker_slot].x, 190, self.VW - 190)
+	local built = t.tier >= 0
+	local n = B.TURRET_GRADE_COUNT
+	local h = 50 + n * 92 + (built and 54 or 0)
+	local y0 = 124
+	gui.set_position(p.panel, vmath.vector3(px, y0 + h / 2, 0))
+	gui.set_size(p.panel, vmath.vector3(360, h, 0))
+	gui.set_position(p.title, vmath.vector3(px, y0 + h - 24, 0))
+	ui.set_text(p.title, (built and "Kuleyi değiştir · " or "Kule kur · ") .. B.tier(me.tier).name)
+	local refund = built and B.turret_def(t.tier, t.grade).cost * B.TURRET_REFUND or 0
+	for gr = 0, n - 1 do
+		local o = p.opts[gr]
+		local def = B.turret_def(me.tier, gr)
+		local y = y0 + h - 50 - 46 - gr * 92
+		o.x, o.y = px, y
+		gui.set_position(o.node, vmath.vector3(px, y, 0))
+		gui.set_position(o.icon, vmath.vector3(px - 134, y, 0))
+		gui.play_flipbook(o.icon, "icon_tur_" .. me.tier .. "_" .. gr)
+		gui.set_position(o.name, vmath.vector3(px - 96, y + 22, 0))
+		ui.set_text(o.name, def.name .. "  " .. def.label)
+		gui.set_position(o.desc, vmath.vector3(px - 96, y, 0))
+		ui.set_text(o.desc, def.desc)
+		gui.set_position(o.stats, vmath.vector3(px - 96, y - 20, 0))
+		ui.set_text(o.stats, string.format("Hasar %s · Menzil %d · %.1f atış/sn", tostring(def.dmg), def.range, 1 / def.cd))
+		gui.set_position(o.cost, vmath.vector3(px + 160, y + 22, 0))
+		local same = t.tier == me.tier and t.grade == gr
+		local price = math.max(0, math.ceil(def.cost - refund))
+		ui.set_text(o.cost, same and "Kurulu" or tostring(built and price or def.cost))
+		ui.enable(o, not same and me.gold >= price)
+	end
+	gui.set_enabled(p.sell.node, built)
+	gui.set_enabled(p.sell.label, built)
+	if built then
+		local y = y0 + 30
+		p.sell.x, p.sell.y = px, y
+		gui.set_position(p.sell.node, vmath.vector3(px, y, 0))
+		gui.set_position(p.sell.label, vmath.vector3(px, y, 0))
+		ui.set_text(p.sell.label, "Sat +" .. math.floor(B.turret_def(t.tier, t.grade).cost * B.TURRET_REFUND))
+	end
+end
+
+local function overlay_clear(self)
+	if self.overlay_group then gui.delete_node(self.overlay_group) end
+	-- bu katmanın düğmelerini listeden çıkar
+	local keep = {}
+	for _, b in ipairs(self.ui.buttons) do
+		if b.modal ~= "overlay" then keep[#keep + 1] = b end
+	end
+	self.ui.buttons = keep
+	self.overlay_group = nil
+	self.overlay_modal = false
+end
+
+local function update_overlay(self, st, me, foe)
+	local phase = st.phase
+	if phase ~= self.last_phase then
+		if phase == "playing" and self.last_phase == "countdown" then
+			self:show_banner("Savaş başladı!", "good")
+			sfx.play("countdown_final")
+		end
+		if phase == "ended" and self.last_phase then
+			-- müzik açıksa zafer/yenilgi motifi çalar, değilse kısa efekt sesi
+			local win = st.winner == net.side
+			if not music.ended(win) then sfx.play(win and "win" or "lose") end
+		end
+		if phase == "waiting" then
+			music.menu()
+		elseif phase == "countdown" or (phase == "playing" and self.last_phase ~= "countdown") then
+			music.battle(true)
+		end
+		self.last_phase = phase
+	end
+	local key = phase
+	if phase == "countdown" then key = key .. math.ceil(st.countdown) end
+	if phase == "playing" and st.paused then key = key .. "p" end
+	if phase == "ended" then key = key .. tostring(me.wantsRematch) .. tostring(foe and foe.wantsRematch) .. tostring(foe and foe.left) end
+	if key == self.overlay_key then return end
+	self.overlay_key = key
+	overlay_clear(self)
+	local ui, VW, VH = self.ui, self.VW, self.VH
+	local g = ui.group(self.g.overlay)
+	self.overlay_group = g
+	local cx, cy = VW / 2, VH / 2
+
+	if phase == "waiting" then
+		self.overlay_modal = true
+		ui.box(cx, cy, 560, 300, { parent = g, color = U.rgb(0x0b1020, 0.92) })
+		if st.mode == "private" then
+			ui.text(cx, cy + 108, "Rakip bekleniyor", { size = 28, parent = g })
+			ui.text(cx, cy + 66, "Arkadaşın bu kodla katılabilir:", { size = 16, parent = g, color = C.dim, font = "small" })
+			ui.text(cx, cy + 6, st.code, { size = 64, font = "big", parent = g, color = C.gold })
+		else
+			ui.text(cx, cy + 80, "Rakip aranıyor…", { size = 28, parent = g })
+			ui.text(cx, cy + 20, "Başka bir oyuncu Hızlı Eşleşme'ye girince maç başlar.", { size = 16, parent = g, color = C.dim, font = "small", width = 500 })
+		end
+		ui.button("ov_cancel", cx, cy - 96, 220, 56, function() msg.post(GAME, "leave") end, { parent = g, modal = "overlay", label = "Vazgeç", size = 22 })
+	elseif phase == "countdown" then
+		local n = math.ceil(st.countdown)
+		ui.text(cx, cy + 40, n > 0 and tostring(n) or "!", { size = 140, font = "big", parent = g, color = C.gold })
+		if n > 0 then sfx.play("countdown") end
+	elseif phase == "playing" then
+		if st.paused then
+			ui.box(cx, cy + 40, 520, 140, { parent = g, color = U.rgb(0x0b1020, 0.9) })
+			ui.text(cx, cy + 66, "Rakibin bağlantısı koptu", { size = 24, parent = g })
+			ui.text(cx, cy + 22, "En fazla " .. B.RECONNECT_S .. " sn bekleniyor…", { size = 16, parent = g, color = C.dim, font = "small" })
+		end
+	elseif phase == "ended" and st.mode == "tutorial" then
+		self.overlay_modal = true
+		self.picker_slot = -1
+		local won = st.winner == net.side
+		if won and not self.tut_done then
+			self.tut_done = true
+			self:save()
+		end
+		ui.box(cx, cy, VW + 40, VH + 40, { parent = g, color = vmath.vector4(0, 0, 0, 0.45), slice = 1 })
+		ui.box(cx, cy, 620, 340, { parent = g, color = U.rgb(won and 0x10301a or 0x1c2238, 0.95) })
+		ui.text(cx, cy + 112, won and "EĞİTİM TAMAM!" or "Eğitim bitti", { size = 52, font = "big", parent = g, color = C.gold })
+		ui.text(cx, cy + 30, won and "Artık hazırsın! Şimdi kolay bota karşı gerçek bir maç dene. Maç sırasında yeni bir durumla karşılaşınca kısa ipuçları çıkacak."
+			or "İstersen eğitimi ana menüden tekrar oynayabilirsin.", { size = 17, parent = g, width = 540, color = U.rgb(0xdfe6f5) })
+		ui.button("ov_bot", cx - 130, cy - 100, 240, 58, function() self:play_bot() end, { parent = g, modal = "overlay", label = "Bota Karşı Oyna", size = 20, color = U.rgb(0x2f7a3a) })
+		ui.button("ov_menu", cx + 130, cy - 100, 240, 58, function() msg.post(GAME, "leave") end, { parent = g, modal = "overlay", label = "Ana menü", size = 20 })
+	elseif phase == "ended" then
+		self.overlay_modal = true
+		self.picker_slot = -1
+		local won = st.winner == net.side
+		local reason = st.reason == "forfeit" and (won and "Rakip oyunu terk etti." or "Oyunu terk ettin.") or (won and "Rakip kaleyi yıktın!" or "Kalen yıkıldı.")
+		ui.box(cx, cy, VW + 40, VH + 40, { parent = g, color = vmath.vector4(0, 0, 0, 0.45), slice = 1 })
+		ui.box(cx, cy, 620, 560, { parent = g, color = U.rgb(won and 0x10301a or 0x301010, 0.95) })
+		ui.text(cx, cy + 228, won and "ZAFER!" or "YENİLGİ", { size = 64, font = "big", parent = g, color = won and C.gold or U.rgb(0xff8a8a) })
+		ui.text(cx, cy + 176, reason, { size = 18, parent = g, color = C.dim })
+		local rows = {
+			{ "", me.name, foe and foe.name or "—" },
+			{ "Kademe", B.tier(me.tier).name, foe and B.tier(foe.tier).name or "—" },
+			{ "Öldürülen", me.kills, foe and foe.kills or 0 },
+			{ "Komutan", "Sv" .. me.cmdLvl, foe and ("Sv" .. foe.cmdLvl) or "—" },
+			{ "Kart", #list(me.cards), foe and #list(foe.cards) or 0 },
+			{ "Üretilen", me.trained, foe and foe.trained or 0 },
+			{ "Kazanılan altın", me.goldEarned, foe and foe.goldEarned or 0 },
+			{ "Süre", K.fmt_time(st.time), "" },
+		}
+		for i, r in ipairs(rows) do
+			local y = cy + 130 - (i - 1) * 34
+			ui.text(cx, y, r[1], { size = 15, parent = g, color = C.dim, font = "small" })
+			ui.text(cx - 110, y, tostring(r[2]), { size = 18, parent = g, color = i == 1 and U.rgb(0x9fc6ff) or C.white })
+			ui.text(cx + 110, y, tostring(r[3]), { size = 18, parent = g, color = i == 1 and U.rgb(0xff9a9a) or C.white })
+		end
+		if foe and foe.wantsRematch and not me.wantsRematch then
+			ui.text(cx, cy - 162, "Rakip rövanş istiyor!", { size = 18, parent = g, color = C.good })
+		end
+		local label = me.wantsRematch and "Rakip bekleniyor…" or "Rövanş"
+		if foe and foe.left then label = "Rakip ayrıldı" end
+		local rb = ui.button("ov_rematch", cx - 130, cy - 222, 240, 58, function() send("rematch") end, { parent = g, modal = "overlay", label = label, size = 20, color = U.rgb(0x2f7a3a) })
+		ui.enable(rb, not me.wantsRematch and foe ~= nil and not foe.left)
+		ui.button("ov_menu", cx + 130, cy - 222, 240, 58, function() msg.post(GAME, "leave") end, { parent = g, modal = "overlay", label = "Ana menü", size = 20 })
+	end
+end
+
+local function update_minimap(self, st)
+	local mm = self.mm
+	local X = mm.X
+	local sx = function(x) return net.side == 0 and x or B.WORLD_W - x end
+	for i = 1, #B.OUTPOST_XS do
+		local o = st.outposts and st.outposts[i]
+		if o then
+			gui.set_position(mm.flags[i], vmath.vector3(X(sx(o.x)), mm.y + 6, 0))
+			gui.set_color(mm.flags[i], o.owner < 0 and U.rgb(0xd8d8d8) or (o.owner == net.side and C.ally or C.foe))
+		else
+			gui.set_color(mm.flags[i], U.rgb(0xd8d8d8))
+		end
+	end
+	local s = st.src
+	gui.set_enabled(mm.src, s ~= nil and s.active)
+	if s and s.active then
+		gui.set_position(mm.src, vmath.vector3(X(sx(s.x)), mm.y + 10, 0))
+		gui.set_color(mm.src, U.rgb(SOURCE_COLOR[s.kind] or 0xffd34d))
+	end
+	local i = 0
+	st.units:each(function(u)
+		i = i + 1
+		if i > MM_DOTS then return end
+		local d = mm.dots[i]
+		gui.set_enabled(d, true)
+		local ally = u.side == net.side
+		local r = u.cmd and 13 or (u.arch == "heavy" and 10 or 7)
+		gui.set_position(d, vmath.vector3(X(sx(u.x)), mm.y - 10, 0))
+		gui.set_size(d, vmath.vector3(r, r, 0))
+		gui.set_color(d, u.cmd and C.gold or (ally and U.rgb(0x7fb6ff) or U.rgb(0xff8a8a)))
+	end)
+	for j = i + 1, MM_DOTS do gui.set_enabled(mm.dots[j], false) end
+	local x0, x1 = X(net.cam_x - net.cam_half), X(net.cam_x + net.cam_half)
+	gui.set_position(mm.cam, vmath.vector3((x0 + x1) / 2, mm.y, 0))
+	gui.set_size(mm.cam, vmath.vector3(math.max(16, x1 - x0), 42, 0))
+end
+
+local REVEAL_SEC = { units = { "units", "queue" }, stance = { "stance" }, outposts = { "ops" }, slots = { "slots" }, evolve = { "evolve" }, cmd = { "cmd" }, special = { "special" } }
+
+local function tut_index(id)
+	for i, s in ipairs(TUT.TUTORIAL) do
+		if s.id == id then return i - 1 end
+	end
+	return 99
+end
+
+local function tip_def(id)
+	for _, t in ipairs(TUT.TIPS) do
+		if t.id == id then return t end
+	end
+end
+
+--- Hedef öğenin dikdörtgeni (merkez x, y, genişlik, yükseklik)
+local function target_rect(self, target)
+	local function of(b) return b.x, b.y, b.w, b.h end
+	local function span(a, c) return (a.x + c.x) / 2, a.y, math.abs(c.x - a.x) + a.w, a.h end
+	if target == "melee" or target == "ranged" or target == "heavy" then return of(self.units[target]) end
+	if target == "units" then return span(self.units.melee, self.units.heavy) end
+	if target == "stance" then return of(self.stance) end
+	if target == "outpost" then return span(self.ops[0], self.ops[#B.OUTPOST_XS - 1]) end
+	if target == "slot" then return of(self.slots[0]) end
+	if target == "evolve" then return of(self.evolve) end
+	if target == "cmd" then return of(self.cmd) end
+	if target == "special" then return of(self.special) end
+	if target == "card" then return self.VW / 2, self.VH / 2 + 40, 920, 270 end
+end
+
+--- Gerçek maçta koşulu tutan, daha önce görülmemiş ilk ipucu (web'deki onboarding.ts ile aynı sıra).
+local function pending_tip(self, st, me)
+	local mine, enemies = 0, 0
+	local foe = { melee = 0, ranged = 0, heavy = 0 }
+	st.units:each(function(u)
+		if u.side == net.side then
+			if not u.cmd then mine = mine + 1 end
+		else
+			enemies = enemies + 1
+			if not u.cmd then foe[u.arch] = (foe[u.arch] or 0) + 1 end
+		end
+	end)
+	local checks = {
+		{ "low_castle", function() return me.baseHp < me.baseMaxHp * 0.3 end },
+		{ "outnumbered", function() return enemies >= mine + 5 and me.stance == "attack" end },
+		{ "enemy_heavy", function() return foe.heavy >= 1 end },
+		{ "enemy_ranged", function() return foe.ranged >= 2 end },
+		{ "enemy_melee", function() return foe.melee >= 5 end },
+		{ "evolve_ready", function() return me.tier < B.MAX_TIER and me.xp >= B.tier(me.tier + 1).xpToReach end },
+		{ "source", function() return st.src ~= nil and st.src.active end },
+		{ "point_owned", function()
+			local ok = false
+			if st.outposts then st.outposts:each(function(o)
+				if o.owner == net.side and not o.built and me.gold >= B.tier(me.tier).outpost.cost then ok = true end
+			end) end
+			return ok
+		end },
+		{ "turret_gold", function()
+			local built = false
+			me.turrets:each(function(t) if t.tier >= 0 then built = true end end)
+			return not built and st.time > 45 and me.gold >= B.turret_def(me.tier, 0).cost
+		end },
+		{ "cmd_ready", function() return me.cmdId ~= "" and me.cmdCd <= 0 and enemies >= 2 end },
+		{ "special_ready", function() return me.specialCd <= 0 and enemies >= 4 end },
+		{ "siege_soon", function() return st.time > B.SIEGE_TIME - 45 and st.time < B.SIEGE_TIME end },
+	}
+	for _, c in ipairs(checks) do
+		if not self.tips_seen[c[1]] and c[2]() then return c[1] end
+	end
+end
+
+local function update_guide(self, st, me, playing, dt)
+	local ui = self.ui
+	local tut = st.mode == "tutorial"
+	-- kademeli açılım
+	for key, secs in pairs(REVEAL_SEC) do
+		local hide = tut and st.tut < tut_index(TUT.TUT_REVEAL[key])
+		for _, k in ipairs(secs) do gui.set_enabled(self.sec[k], not hide) end
+	end
+	-- eğitim paneli (kart ya da kule seçimi açıkken çekilir, onlarla çakışmasın)
+	local step = (tut and st.phase == "playing" and st.tut >= 0) and TUT.TUTORIAL[st.tut + 1] or nil
+	local show = step ~= nil and (self.offer_key or "") == "" and self.picker_slot < 0
+	gui.set_enabled(self.coach.group, show)
+	if step and self.coach_key ~= st.tut then
+		self.coach_key = st.tut
+		if sys.get_engine_info().is_debug then print("[rehber] adım", st.tut + 1, step.id) end
+		ui.set_text(self.coach.step, (st.tut + 1) .. "/" .. #TUT.TUTORIAL)
+		ui.set_text(self.coach.title, step.title)
+		ui.set_text(self.coach.text, step.text)
+		local has = step.button ~= nil
+		gui.set_enabled(self.coach.next.node, has)
+		gui.set_enabled(self.coach.next.label, has)
+		if has then ui.set_text(self.coach.next.label, step.button) end
+		gui.set_scale(self.coach.group, vmath.vector3(0.96, 0.96, 1))
+		gui.animate(self.coach.group, "scale", vmath.vector3(1, 1, 1), gui.EASING_OUTBACK, 0.25)
+	end
+	-- gerçek maçlarda bir kerelik ipuçları
+	self.tip_gap = (self.tip_gap or 0) - dt
+	if self.tip_id then
+		self.tip_t = self.tip_t - dt
+		if self.tip_t <= 0 or not playing then self:hide_tip() end
+	end
+	if not tut and playing and not self.tip_id and self.tip_gap <= 0 then
+		local id = pending_tip(self, st, me)
+		local tip = id and tip_def(id)
+		if tip then
+			self.tips_seen[id] = true
+			self:save()
+			self.tip_id = id
+			self.tip_t = 8
+			self.tip_gap = 25
+			ui.set_text(self.tip.text, tip.text)
+			gui.set_enabled(self.tip.group, true)
+		end
+	end
+	-- hedefi parlat
+	local target = step and step.target or (self.tip_id and tip_def(self.tip_id).target) or nil
+	local x, y, w, h
+	if target then x, y, w, h = target_rect(self, target) end
+	gui.set_enabled(self.hl, x ~= nil)
+	if x then
+		gui.set_position(self.hl, vmath.vector3(x, y, 0))
+		gui.set_size(self.hl, vmath.vector3(w + 18, h + 18, 0))
+	end
+end
+
+local function refresh_tier(self, tier)
+	for _, arch in ipairs(B.ARCHES) do gui.play_flipbook(self.units[arch].icon, "icon_u_" .. tier .. "_" .. arch) end
+	gui.play_flipbook(self.special.icon, "icon_spec_" .. tier)
+	self.ui.set_text(self.special.name, B.tier(tier).special.name)
+	gui.play_flipbook(self.cmd.icon, "icon_cmd_" .. tier)
+end
+
+local function update_hud(self, dt)
+	local st = net.state()
+	if not st or not st.players or net.side < 0 then return end
+	local me, foe = net.players()
+	if not me then return end
+	local ui = self.ui
+	local playing = st.phase == "playing" and not st.paused
+
+	update_overlay(self, st, me, foe)
+	if me.tier ~= self.last_tier then
+		self.last_tier = me.tier
+		refresh_tier(self, me.tier)
+	end
+	fill_card(self, self.me, me)
+	if foe then
+		fill_card(self, self.foe, foe)
+	else
+		-- rakip henüz yok (bekleme): önceki maçtan kalanları temizle
+		ui.set_text(self.foe.name, "—")
+		ui.set_text(self.foe.tier, "")
+		ui.set_text(self.foe.hp, "")
+		gui.set_size(self.foe.fill, vmath.vector3(1, 16, 0))
+		self.foe.chip_key = ""
+		for _, ic in ipairs(self.foe.chips) do gui.set_enabled(ic, false) end
+	end
+
+	local cards = list(me.cards)
+	local mods = B.card_mods(cards)
+	-- süre + Yıkım Saati
+	local siege = st.time > B.SIEGE_TIME
+	if siege then
+		ui.set_text(self.timer, K.fmt_time(st.time) .. string.format(" · Yıkım ×%.1f", B.siege_mult(st.time)))
+	else
+		local left = B.SIEGE_TIME - st.time
+		ui.set_text(self.timer, (left < 60 and st.phase == "playing") and (K.fmt_time(st.time) .. " · Yıkım " .. math.ceil(left) .. " sn") or K.fmt_time(st.time))
+	end
+	gui.set_color(self.timer, (siege or B.SIEGE_TIME - st.time < 60) and U.rgb(0xff9a6a) or C.white)
+	if siege and not self.last_siege and st.phase == "playing" then self:show_banner("Yıkım Saati başladı: kaleler çöküyor!", "warn") end
+	self.last_siege = siege
+	-- gerilim müziği: kalelerden biri düşmek üzereyken ya da Yıkım Saati'nde
+	local function hp_frac(p) return (p and p.baseMaxHp > 0) and p.baseHp / p.baseMaxHp or 1 end
+	music.tension(st.phase == "playing" and (siege or hp_frac(me) < music.TENSION_HP or hp_frac(foe) < music.TENSION_HP))
+
+	-- Eter Kaynağı
+	local src = st.src
+	if src and st.phase == "playing" and st.mode ~= "tutorial" then
+		if src.active then
+			local info = B.SOURCE_KINDS[src.kind]
+			local who = src.cap > 0 and (src.capSide == net.side and (" · senin %" .. math.floor(src.cap * 100 + 0.5)) or (" · rakip %" .. math.floor(src.cap * 100 + 0.5))) or ""
+			ui.set_text(self.src_text, (info and info.name or "") .. who)
+			gui.set_color(self.src_text, U.rgb(SOURCE_COLOR[src.kind] or 0xffffff))
+			gui.set_enabled(self.src_icon, true)
+			if self.src_kind ~= src.kind then
+				self.src_kind = src.kind
+				gui.play_flipbook(self.src_icon, "icon_src_" .. src.kind)
+			end
+		else
+			ui.set_text(self.src_text, "Eter Kaynağı " .. K.fmt_time(src.next))
+			gui.set_color(self.src_text, C.dim)
+			gui.set_enabled(self.src_icon, false)
+		end
+	else
+		ui.set_text(self.src_text, "")
+		gui.set_enabled(self.src_icon, false)
+	end
+	ui.set_text(self.fury, me.furyT > 0 and ("Öfke " .. math.ceil(me.furyT)) or "")
+	update_offer(self, me, playing)
+
+	-- kaynaklar
+	local gold = me.gold
+	local owned = 0
+	local mine_units, enemies = 0, 0
+	st.units:each(function(u) if u.side == net.side then mine_units = mine_units + 1 else enemies = enemies + 1 end end)
+	if st.outposts then st.outposts:each(function(o) if o.owner == net.side then owned = owned + 1 end end) end
+	local income = B.tier(me.tier).income * (1 + owned * B.OUTPOST_INCOME) * mods.income
+	-- altın sayacı kazanınca sayarak artar, harcayınca anında düşer
+	if not self.gold_shown or gold < self.gold_shown then self.gold_shown = gold end
+	local d = gold - self.gold_shown
+	self.gold_shown = math.abs(d) < 0.5 and gold or self.gold_shown + d * math.min(1, dt * 9)
+	ui.set_text(self.gold, K.fmt_num(math.floor(self.gold_shown + 0.5)))
+	ui.set_text(self.income, string.format("+%.1f/sn · Ordu %d/%d", math.floor(income * 10 + 0.5) / 10, mine_units, B.MAX_UNITS_PER_SIDE))
+
+	-- karakol noktaları
+	for s = 0, #B.OUTPOST_XS - 1 do
+		local b = self.ops[s]
+		local o = st.outposts and st.outposts[self:op_index(s) + 1]
+		if o then
+			local color, text, enabled = U.rgb(0x4a5470), "Tarafsız", false
+			if o.owner < 0 then
+				if o.cap > 0 then
+					color = o.capSide == net.side and U.rgb(0x2a4a80) or U.rgb(0x803030)
+					text = "%" .. math.floor(o.cap * 100 + 0.5)
+				end
+			elseif o.owner == net.side then
+				color = U.rgb(0x2d5fa8)
+				if not o.built then
+					local c = B.tier(me.tier).outpost.cost
+					text = "Kur " .. K.fmt_num(c)
+					enabled = playing and gold >= c
+				elseif o.tier < me.tier then
+					local c = B.outpost_upgrade_cost(o.tier, me.tier)
+					text = "Yükselt " .. K.fmt_num(c)
+					enabled = playing and gold >= c
+				elseif not o.armed then
+					local c = B.tier(o.tier).outpost.armCost
+					text = "Kule ekle " .. K.fmt_num(c)
+					enabled = playing and gold >= c
+				else
+					text = "Karakol %" .. math.floor(o.hp / o.maxHp * 100 + 0.5)
+				end
+			else
+				color = U.rgb(0x8a2f2f)
+				text = o.built and ("Karakol %" .. math.floor(o.hp / o.maxHp * 100 + 0.5)) or "Düşman"
+			end
+			ui.recolor(b, color)
+			ui.set_text(b.label, text)
+			ui.enable(b, enabled)
+			gui.set_color(b.label, vmath.vector4(1, 1, 1, enabled and 1 or 0.85))
+		else
+			-- maç başlamadı: noktalar henüz yok
+			ui.recolor(b, U.rgb(0x4a5470))
+			ui.set_text(b.label, "")
+			ui.enable(b, false)
+		end
+	end
+
+	-- birim düğmeleri
+	local queue_full = me.queue:length() >= B.MAX_QUEUE
+	for _, arch in ipairs(B.ARCHES) do
+		local cost = B.unit_cost(me.tier, arch, mods)
+		local b = self.units[arch]
+		ui.set_text(b.cost, tostring(cost))
+		ui.enable(b, playing and gold >= cost and not queue_full)
+		gui.set_color(b.icon, vmath.vector4(1, 1, 1, b.enabled and 1 or 0.45))
+	end
+
+	-- komutan
+	local cmd = me.cmdId ~= "" and st.units:get(me.cmdId) or nil
+	if cmd then
+		gui.set_size(self.cmd.hpfill, vmath.vector3(math.max(1, 80 * U.clamp(cmd.hp / math.max(1, cmd.maxHp), 0, 1)), 5, 0))
+		ui.set_text(self.cmd.name, "Komutan Sv" .. me.cmdLvl)
+	else
+		gui.set_size(self.cmd.hpfill, vmath.vector3(1, 5, 0))
+		ui.set_text(self.cmd.name, st.phase == "playing" and ("Döner: " .. math.ceil(me.cmdRespawn)) or "Komutan")
+	end
+	local ccd, cmax = me.cmdCd, B.CMD_SKILL_CD * mods.cmdCd
+	gui.set_fill_angle(self.cmd.pie, ccd > 0 and math.min(1, ccd / cmax) * 360 or 0)
+	ui.set_text(self.cmd.cd, (ccd > 0 and cmd) and tostring(math.ceil(ccd)) or "")
+	local cmd_ready = playing and cmd ~= nil and ccd <= 0
+	ui.enable(self.cmd, cmd_ready)
+	ui.recolor(self.cmd, (cmd_ready and enemies > 0) and U.rgb(0x8a6a1a) or C.btn)
+	gui.set_color(self.cmd.icon, vmath.vector4(1, 1, 1, cmd and 1 or 0.35))
+
+	-- kuyruk
+	for i = 0, B.MAX_QUEUE - 1 do
+		local q = self.queue[i]
+		local entry = me.queue[i + 1]
+		gui.set_enabled(q.icon, entry ~= nil)
+		if entry then
+			local t, arch = entry:match("^(%d+):(%a+)")
+			if t then gui.play_flipbook(q.icon, "icon_u_" .. t .. "_" .. arch) end
+			gui.set_size(q.prog, vmath.vector3(i == 0 and math.max(0.5, 40 * me.trainProgress) or 0.5, 5, 0))
+		else
+			gui.set_size(q.prog, vmath.vector3(0.5, 5, 0))
+		end
+		ui.enable(q, entry ~= nil)
+		-- boş kare neredeyse saydam (kalenin önünü kapatmasın)
+		gui.set_color(q.node, entry and C.panel or vmath.vector4(0.06, 0.08, 0.15, 0.25))
+	end
+
+	-- kuleler
+	local cheapest = B.turret_def(me.tier, 0).cost
+	local nt = me.turrets:length()
+	for s = 0, B.MAX_SLOTS - 1 do
+		local b = self.slots[s]
+		local t = me.turrets[s + 1]
+		local visible = true
+		if not t then
+			if s == nt then
+				local cost = B.SLOT_COSTS[s + 1]
+				ui.set_text(b.label, "Yuva aç")
+				ui.set_text(b.cost, tostring(cost))
+				ui.enable(b, playing and gold >= cost)
+				gui.set_enabled(b.icon, false)
+			else
+				visible = false
+			end
+		elseif t.tier < 0 then
+			ui.set_text(b.label, "Kule kur")
+			ui.set_text(b.cost, cheapest .. "+")
+			ui.enable(b, playing and gold >= cheapest)
+			gui.set_enabled(b.icon, true)
+			gui.play_flipbook(b.icon, "icon_tur_" .. me.tier .. "_1")
+			gui.set_color(b.icon, vmath.vector4(1, 1, 1, 0.4))
+		else
+			local def = B.turret_def(t.tier, t.grade)
+			local outdated = t.tier < me.tier
+			gui.set_enabled(b.icon, true)
+			gui.play_flipbook(b.icon, "icon_tur_" .. t.tier .. "_" .. t.grade)
+			gui.set_color(b.icon, vmath.vector4(1))
+			ui.set_text(b.label, outdated and "Yükselt" or def.name)
+			ui.set_text(b.cost, outdated and "^" or def.label)
+			ui.enable(b, playing)
+		end
+		ui.recolor(b, (t and t.tier >= 0 and t.tier < me.tier) and U.rgb(0x7a5a1a) or (self.picker_slot == s and C.btn_hi or C.btn))
+		for _, n in ipairs({ b.node, b.label, b.cost }) do gui.set_enabled(n, visible) end
+		if not visible then gui.set_enabled(b.icon, false) end
+	end
+	update_picker(self, me, playing)
+
+	-- duruş
+	local hold = me.stance == "hold"
+	ui.set_text(self.stance.label, hold and "SAVUN" or "HÜCUM")
+	ui.set_text(self.stance.hint, hold and "Kale önünde toplan" or "İleri, saldır!")
+	ui.recolor(self.stance, hold and U.rgb(0x2d5fa8) or U.rgb(0x8a3a2a))
+	ui.enable(self.stance, st.phase == "playing" or st.phase == "countdown")
+
+	-- özel güç
+	local cd = me.specialCd
+	gui.set_fill_angle(self.special.pie, cd > 0 and math.min(1, cd / (B.SPECIAL_CD * mods.specialCd)) * 360 or 0)
+	ui.set_text(self.special.cd, cd > 0 and tostring(math.ceil(cd)) or "")
+	local sp_ready = playing and cd <= 0 and enemies > 0
+	ui.enable(self.special, sp_ready)
+	ui.recolor(self.special, sp_ready and U.rgb(0x8a6a1a) or C.btn)
+
+	-- kademe
+	local ev = self.evolve
+	if me.tier >= B.MAX_TIER then
+		ui.set_text(ev.title, "Son kademe")
+		ui.set_text(ev.xp, K.fmt_num(me.xp) .. " XP")
+		gui.set_size(ev.fill, vmath.vector3(150, 100, 0))
+		ui.enable(ev, false)
+		gui.set_enabled(ev.hint, false)
+	else
+		local nxt = B.tier(me.tier + 1)
+		local prev = B.tier(me.tier).xpToReach
+		local k = math.min(1, (me.xp - prev) / (nxt.xpToReach - prev))
+		ui.set_text(ev.title, nxt.name)
+		ui.set_text(ev.xp, K.fmt_num(me.xp) .. " / " .. K.fmt_num(nxt.xpToReach))
+		gui.set_size(ev.fill, vmath.vector3(math.max(1, 150 * math.max(0, k)), 100, 0))
+		local ready = me.xp >= nxt.xpToReach
+		ui.enable(ev, playing and ready)
+		gui.set_enabled(ev.hint, playing and ready)
+		ui.recolor(ev, ready and U.rgb(0x2f7a3a) or C.btn)
+	end
+
+	update_minimap(self, st)
+	update_guide(self, st, me, playing, dt)
+	gui.set_enabled(self.g.confirm, self.confirm)
+end
+
+-- ── yaşam döngüsü ────────────────────────────────────────
+function init(self)
+	for k, f in pairs(Ui) do self[k] = f end
+	local saved = sys.load(SAVE) or {}
+	self.name = saved.name or ("Simyacı" .. math.random(100, 999))
+	self.tut_done = saved.tut_done == true
+	self.muted = saved.muted == true
+	sfx.muted = self.muted
+	self.music_off = saved.music_off == true
+	music.set_off(self.music_off)
+	self.tips_seen = saved.tips or {}
+	-- ilk maçlar için kolay bot önerilir
+	self.level = saved.level or (self.tut_done and "normal" or "easy")
+	self.code = ""
+	self.editing = nil
+	self.busy = false
+	self.screen = "menu"
+	self.picker_slot = -1
+	self.confirm = false
+	self.banner_t = 0
+	self.toast_t = 0
+	self.focus = false
+	build(self)
+	-- Web sürümündeki davet linki: ?oda=ABCD
+	if html5 then
+		local code = html5.run("new URLSearchParams(location.search).get('oda') || ''")
+		if code and #code == 4 then
+			self.code = string.upper(code)
+			self:refresh_menu()
+			self:join({ mode = "join", code = self.code })
+		end
+	end
+end
+
+function update(self, dt)
+	if not self.focus then
+		-- girdiyi oyun dünyasından önce al (dünya: kaydırma)
+		msg.post(".", "acquire_input_focus")
+		self.focus = true
+	end
+	-- ekran boyutu ya da güvenli alan değişince (döndürme, eklentinin değerleri geç hazır olması) yeniden kur
+	self.inset_check = (self.inset_check or 0) - dt
+	local rebuild = math.abs(screen_w() - self.W) > 1
+	if self.inset_check <= 0 then
+		self.inset_check = 1
+		local l, r, t, b = safe_insets()
+		if (l .. "," .. r .. "," .. t .. "," .. b) ~= self.inset_px then rebuild = true end
+	end
+	if rebuild then build(self) end
+	if self.screen == "game" then update_hud(self, dt) end
+	if self.banner_t > 0 then
+		self.banner_t = self.banner_t - dt
+		if self.banner_t <= 0 then
+			gui.set_enabled(self.banner_box, false)
+			gui.set_enabled(self.banner, false)
+		end
+	end
+	if self.toast_t > 0 then
+		self.toast_t = self.toast_t - dt
+		if self.toast_t <= 0 then
+			gui.set_enabled(self.toast_box, false)
+			gui.set_enabled(self.toast, false)
+		end
+	end
+end
+
+local function on_fx(self, e)
+	local mine = e.side == net.side
+	if e.t == "evolve" then
+		local name = B.tier(e.tier).name
+		self:show_banner(mine and (name .. " kademesine yükseldin!") or ("Rakip " .. name .. " kademesine yükseldi!"), mine and "good" or "warn")
+	elseif e.t == "special" and not mine then
+		self:show_banner("Rakip: " .. B.tier(e.tier).special.name .. "!", "warn")
+	elseif e.t == "outpost" then
+		if e.k == "built" and mine then sfx.play("evolve") end
+		if e.k == "captured" then self:show_banner(mine and "Nokta ele geçirildi! (+%25 gelir)" or "Rakip bir nokta aldı", mine and "good" or "warn")
+		elseif e.k == "lost" and mine then self:show_banner("Bir noktayı kaybettin", "warn")
+		elseif e.k == "destroyed" then self:show_banner(mine and "Karakolun yıkıldı!" or "Rakip karakolunu yıktın!", mine and "warn" or "good") end
+	elseif e.t == "src" then
+		local info = B.SOURCE_KINDS[e.kind]
+		if not info then return end
+		if e.k == "spawn" then self:show_banner("Eter Kaynağı belirdi: " .. info.name, "good")
+		elseif mine then self:show_banner("Kaynak senin! " .. info.name, "good")
+		else self:show_banner("Rakip kaynağı aldı: " .. info.name, "warn") end
+	elseif e.t == "card" and not mine then
+		local c = B.card_def(e.id)
+		if c then self:show_banner("Rakip kart seçti: " .. c.name, "warn") end
+	elseif e.t == "cmd" then
+		if e.k == "die" then self:show_banner(mine and ("Komutanın düştü! " .. B.CMD_RESPAWN .. " sn sonra döner") or "Rakip komutanı düşürdün!", mine and "warn" or "good")
+		elseif e.k == "level" and mine then self:show_banner("Komutan seviye " .. tostring(e.lvl) .. "!", "good") end
+	end
+end
+
+function on_message(self, message_id, message)
+	if message_id == hash("joined") then
+		self.busy = false
+		self:refresh_menu()
+	elseif message_id == hash("bound") then
+		self.last_tier = -1
+		self.offer_key = nil
+		self.overlay_key = ""
+		self.last_phase = nil
+		self.last_siege = false
+		self.coach_key = nil
+		self.tip_gap = 15 -- maçın ilk saniyelerinde ipucu yağmasın
+		self:hide_tip()
+		overlay_clear(self)
+		self:show_screen("game")
+	elseif message_id == hash("join_error") then
+		self.busy = false
+		self:refresh_menu()
+		self:show_toast(message.text)
+	elseif message_id == hash("left") then
+		overlay_clear(self)
+		self.overlay_key = ""
+		self:show_screen("menu")
+		self.busy = false
+		self:refresh_menu()
+		if message.code ~= 4000 and message.code ~= 1000 and message.code ~= 0 then self:show_toast("Sunucu bağlantısı koptu.") end
+	elseif message_id == hash("coins") then
+		self:fly_coins(message.x, message.y, message.n)
+	elseif message_id == hash("fx") then
+		on_fx(self, message)
+	end
+end
+
+function on_input(self, action_id, action)
+	if action_id == H_MARKED and self.editing then
+		self.marked = action.text
+		self:refresh_menu()
+		return true
+	elseif action_id == H_TEXT and self.editing then
+		self.marked = nil
+		if self.editing == "name" then
+			-- karakter karakter ekle (16 sınırı), kontrol karakterlerini at
+			local clean = (action.text:gsub("%c", ""))
+			for ch in clean:gmatch("[%z\1-\127\194-\244][\128-\191]*") do
+				if K.utf8_len(self.name) < 16 then self.name = self.name .. ch end
+			end
+		else
+			local t = string.upper(action.text):gsub("[^A-Z]", "")
+			self.code = (self.code .. t):sub(1, 4)
+		end
+		self:refresh_menu()
+		return true
+	elseif action_id == H_BACKSPACE and self.editing and action.pressed then
+		if self.editing == "name" then self.name = K.utf8_pop(self.name) else self.code = self.code:sub(1, -2) end
+		self:refresh_menu()
+		return true
+	elseif action_id == H_ENTER and self.editing and action.pressed then
+		local was = self.editing
+		self:stop_edit()
+		if was == "code" and #self.code == 4 then self:join({ mode = "join", code = self.code }) end
+		return true
+	elseif action_id == H_BACK and action.released then
+		if self.picker_slot >= 0 then self.picker_slot = -1 return true end
+		if self.confirm then self.confirm = false return true end
+		if self.screen == "game" then self:ask_leave() return true end
+		return false
+	end
+
+	if action_id ~= H_TOUCH then
+		-- parmak sürüklenirken: düğmeye basılıysa dünyaya geçirme
+		return self.pressed ~= nil
+	end
+	local x = (action.x / 1280 * self.W - self.inset.l) / self.S
+	local y = (action.y - self.inset.b) / self.S
+	local modal
+	if self.screen == "menu" then modal = "menu"
+	elseif self.confirm then modal = "confirm"
+	elseif self.overlay_modal then modal = "overlay" end
+
+	if action.pressed then
+		local b = self.ui.hit(x, y, modal)
+		-- kule menüsü açıkken dışarı dokununca kapanır
+		if self.picker_slot >= 0 and not (b and (b.id:sub(1, 4) == "pick" or b.id == "sell" or b.id:sub(1, 4) == "slot")) then self.picker_slot = -1 end
+		if self.editing and not (b and (b.id == "name" or b.id == "code")) then self:stop_edit() end
+		if b then
+			self.pressed = b
+			gui.set_scale(b.node, vmath.vector3(0.94, 0.94, 1))
+			if b.id == "minimap" then
+				msg.post(GAME, "center", { x = WORLD_MIN + (x - self.mm.x0) / self.mm.w * (WORLD_MAX - WORLD_MIN) })
+			end
+			return true
+		end
+		-- menüde ya da kipli ekranda dünyayı kaydırma
+		return modal ~= nil
+	elseif action.released then
+		local b = self.pressed
+		self.pressed = nil
+		if b then
+			gui.set_scale(b.node, vmath.vector3(1, 1, 1))
+			if b.enabled and math.abs(x - b.x) <= b.w / 2 + 12 and math.abs(y - b.y) <= b.h / 2 + 12 and b.id ~= "minimap" then
+				sfx.play("click")
+				b.fn()
+			end
+			return true
+		end
+		return modal ~= nil
+	else
+		-- basılı sürükleme: mini haritada kamera kayar
+		if self.pressed and self.pressed.id == "minimap" then
+			msg.post(GAME, "center", { x = WORLD_MIN + (x - self.mm.x0) / self.mm.w * (WORLD_MAX - WORLD_MIN) })
+		end
+		return self.pressed ~= nil
+	end
+end

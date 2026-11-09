@@ -1,9 +1,13 @@
 // Ana menü (HTML). Oyun alanı arka planda yavaşça kayar.
 import type { BotLevel } from '../../shared/protocol';
+import { musicButton } from '../music';
+import { TRACKS } from '../tracks';
 import { h } from './dom';
+import { tutorialDone } from './onboarding';
 
 export interface MenuHandlers {
   bot(level: BotLevel): void;
+  tutorial(): void;
   quick(): void;
   create(): void;
   join(code: string): void;
@@ -30,6 +34,9 @@ export class Menu {
   private codeInput: HTMLInputElement;
   private levelSelect: HTMLSelectElement;
   private buttons: HTMLButtonElement[] = [];
+  private tutBtn!: HTMLButtonElement;
+  private botBtn!: HTMLButtonElement;
+  private tutHint!: HTMLElement;
 
   constructor(root: HTMLElement, handlers: MenuHandlers) {
     this.nameInput = h('input', {
@@ -47,7 +54,8 @@ export class Menu {
       h('option', { value: 'normal', text: 'Normal' }),
       h('option', { value: 'hard', text: 'Zor' }),
     );
-    this.levelSelect.value = load('gc_level', 'normal');
+    // ilk maçlar için kolay bot önerilir
+    this.levelSelect.value = load('gc_level', tutorialDone() ? 'normal' : 'easy');
     this.levelSelect.addEventListener('change', () => save('gc_level', this.levelSelect.value));
 
     this.codeInput = h('input', { class: 'code', maxlength: 4, placeholder: 'KOD', autocomplete: 'off', spellcheck: 'false' });
@@ -78,10 +86,12 @@ export class Menu {
         h('div', { class: 'logo' }, h('span', { class: 'logo-top', text: 'GOLEM' }), h('span', { class: 'logo-bottom', text: 'CEPHESİ' })),
         h('p', { class: 'tag', text: 'Dökümhaneni yükselt, golem ordunu sür, rakip kaleyi yık.' }),
         h('label', { class: 'field' }, h('span', { text: 'Adın' }), this.nameInput),
+        (this.tutBtn = btn('Eğitimle Başla', 'btn tutorial', () => handlers.tutorial())),
+        (this.tutHint = h('p', { class: 'tuthint', text: 'İlk kez mi oynuyorsun? 3-4 dakikalık rehberli maç her şeyi gösterir.' })),
         h(
           'div',
           { class: 'row' },
-          btn('Bota Karşı Oyna', 'btn primary grow', () => handlers.bot(this.levelSelect.value as BotLevel)),
+          (this.botBtn = btn('Bota Karşı Oyna', 'btn primary grow', () => handlers.bot(this.levelSelect.value as BotLevel))),
           this.levelSelect,
         ),
         btn('Hızlı Eşleşme', 'btn', () => handlers.quick()),
@@ -116,9 +126,37 @@ export class Menu {
           ),
         ),
       ),
-      h('div', { class: 'menu-foot', text: 'Prototip v0.2' }),
+      h(
+        'details',
+        { class: 'menu-foot' },
+        h('summary', { text: 'Prototip v0.2 · Müzik künyesi' }),
+        h(
+          'ul',
+          { class: 'credits' },
+          ...Object.values(TRACKS).map((t) =>
+            h(
+              'li',
+              {},
+              h('a', { href: t.url, target: '_blank', rel: 'noopener', text: t.title }),
+              ` · ${t.author} · ${t.license}`,
+            ),
+          ),
+          h('li', { class: 'note', text: 'Parçaların baş/son sessizlikleri kırpıldı ve sıkıştırıldı.' }),
+        ),
+      ),
+      musicButton('menu-music'),
     );
     root.append(this.el);
+    this.refresh();
+  }
+
+  /** Eğitim bitmediyse "Eğitimle Başla" öne çıkar; bittiyse küçük bir bağlantıya döner. */
+  refresh() {
+    const done = tutorialDone();
+    this.tutBtn.className = done ? 'btn tutorial small' : 'btn tutorial primary';
+    this.tutBtn.textContent = done ? 'Eğitimi tekrar oyna' : 'Eğitimle Başla';
+    this.tutHint.classList.toggle('hidden', done);
+    this.botBtn.classList.toggle('primary', done);
   }
 
   get name(): string {

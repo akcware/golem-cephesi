@@ -1,0 +1,9 @@
+/build
+/bundle
+/.internal
+/.editor_settings
+# public/music/ altından kopyalanır (tools/bake-music.ts)
+/assets/music
+# hata ayıklama imza anahtarı (yalnızca yerel test için, açık depoya girmez)
+/debug.keystore
+/debug.keystore.pass.txt

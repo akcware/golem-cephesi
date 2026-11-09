@@ -1,0 +1,168 @@
+images {
+  image: "/assets/images/fx/turret_0_0.png"
+}
+images {
+  image: "/assets/images/fx/tproj_0_0.png"
+}
+images {
+  image: "/assets/images/fx/turret_0_1.png"
+}
+images {
+  image: "/assets/images/fx/tproj_0_1.png"
+}
+images {
+  image: "/assets/images/fx/turret_0_2.png"
+}
+images {
+  image: "/assets/images/fx/tproj_0_2.png"
+}
+images {
+  image: "/assets/images/fx/proj_0.png"
+}
+images {
+  image: "/assets/images/fx/spec_0.png"
+}
+images {
+  image: "/assets/images/fx/turret_1_0.png"
+}
+images {
+  image: "/assets/images/fx/tproj_1_0.png"
+}
+images {
+  image: "/assets/images/fx/turret_1_1.png"
+}
+images {
+  image: "/assets/images/fx/tproj_1_1.png"
+}
+images {
+  image: "/assets/images/fx/turret_1_2.png"
+}
+images {
+  image: "/assets/images/fx/tproj_1_2.png"
+}
+images {
+  image: "/assets/images/fx/proj_1.png"
+}
+images {
+  image: "/assets/images/fx/spec_1.png"
+}
+images {
+  image: "/assets/images/fx/turret_2_0.png"
+}
+images {
+  image: "/assets/images/fx/tproj_2_0.png"
+}
+images {
+  image: "/assets/images/fx/turret_2_1.png"
+}
+images {
+  image: "/assets/images/fx/tproj_2_1.png"
+}
+images {
+  image: "/assets/images/fx/turret_2_2.png"
+}
+images {
+  image: "/assets/images/fx/tproj_2_2.png"
+}
+images {
+  image: "/assets/images/fx/proj_2.png"
+}
+images {
+  image: "/assets/images/fx/spec_2.png"
+}
+images {
+  image: "/assets/images/fx/turret_3_0.png"
+}
+images {
+  image: "/assets/images/fx/tproj_3_0.png"
+}
+images {
+  image: "/assets/images/fx/turret_3_1.png"
+}
+images {
+  image: "/assets/images/fx/tproj_3_1.png"
+}
+images {
+  image: "/assets/images/fx/turret_3_2.png"
+}
+images {
+  image: "/assets/images/fx/tproj_3_2.png"
+}
+images {
+  image: "/assets/images/fx/proj_3.png"
+}
+images {
+  image: "/assets/images/fx/spec_3.png"
+}
+images {
+  image: "/assets/images/fx/turret_4_0.png"
+}
+images {
+  image: "/assets/images/fx/tproj_4_0.png"
+}
+images {
+  image: "/assets/images/fx/turret_4_1.png"
+}
+images {
+  image: "/assets/images/fx/tproj_4_1.png"
+}
+images {
+  image: "/assets/images/fx/turret_4_2.png"
+}
+images {
+  image: "/assets/images/fx/tproj_4_2.png"
+}
+images {
+  image: "/assets/images/fx/proj_4.png"
+}
+images {
+  image: "/assets/images/fx/spec_4.png"
+}
+images {
+  image: "/assets/images/fx/slot.png"
+}
+images {
+  image: "/assets/images/fx/ether_src.png"
+}
+images {
+  image: "/assets/images/fx/px.png"
+}
+images {
+  image: "/assets/images/fx/dot.png"
+}
+images {
+  image: "/assets/images/fx/soft.png"
+}
+images {
+  image: "/assets/images/fx/ring.png"
+}
+images {
+  image: "/assets/images/fx/crack_0.png"
+}
+images {
+  image: "/assets/images/fx/crack_1.png"
+}
+images {
+  image: "/assets/images/fx/white.png"
+}
+images {
+  image: "/assets/images/fx/blob.png"
+}
+images {
+  image: "/assets/images/fx/op_banner.png"
+}
+images {
+  image: "/assets/images/fx/rally.png"
+}
+images {
+  image: "/assets/images/fx/src_gold.png"
+}
+images {
+  image: "/assets/images/fx/src_fury.png"
+}
+images {
+  image: "/assets/images/fx/src_heal.png"
+}
+margin: 2
+extrude_borders: 2
+inner_padding: 0
