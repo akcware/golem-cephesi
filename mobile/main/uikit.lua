@@ -1,6 +1,7 @@
 -- Arayüz yapı taşları: kutu, yazı, ikon, düğme. Düğümler mutlak konumla (sol alt köşe 0,0;
 -- yükseklik 720, genişlik ekran oranına göre) kurulur; dokunma testi de aynı düzlemde yapılır.
 local U = require("main.util")
+local I = require("shared.i18n")
 
 local M = {}
 
@@ -26,7 +27,7 @@ M.C = {
 --- scale: küçük ekranlarda tüm arayüzü küçültür; düğüm konumları bu ölçeğe bölünmüş (sanal) düzlemdedir.
 --- ox, oy: arayüzün sol alt köşesinin kaydırması (ekran çentiği / güvenli alan).
 function M.new(scale, ox, oy)
-	local ui = { buttons = {}, texts = {} }
+	local ui = { buttons = {}, texts = {}, base = {}, fitw = {} }
 	ui.root = gui.new_box_node(vmath.vector3(ox or 0, oy or 0, 0), vmath.vector3(0, 0, 0))
 	gui.set_visible(ui.root, false)
 	gui.set_scale(ui.root, vmath.vector3(scale, scale, 1))
@@ -73,7 +74,29 @@ function M.new(scale, ox, oy)
 		return n
 	end
 
-	--- o: { font, size, color, pivot, parent, width (satır kaydırma), outline }
+	--- Yazı düğümünün ölçeksiz genişliği (fontun kendi ölçüsüyle).
+	local fonts = {}
+	local function text_width(n)
+		local name = gui.get_font(n)
+		local res = fonts[name]
+		if not res then
+			res = gui.get_font_resource(name)
+			fonts[name] = res
+		end
+		return resource.get_text_metrics(res, gui.get_text(n)).width
+	end
+
+	--- Tek satırlık yazı fitw[n] genişliğini aşarsa küçülür (uzun dillerde düğme yazıları taşmasın).
+	local function fit(n)
+		local maxw = ui.fitw[n]
+		if not maxw then return end
+		local k = ui.base[n]
+		local w = text_width(n) * k
+		local s = (w > maxw and w > 0) and k * maxw / w or k
+		gui.set_scale(n, vmath.vector3(s, s, 1))
+	end
+
+	--- o: { font, size, color, pivot, parent, width (satır kaydırma), fit (en fazla genişlik, küçülterek), outline }
 	function ui.text(x, y, str, o)
 		o = o or {}
 		local font = o.font or "ui"
@@ -91,6 +114,11 @@ function M.new(scale, ox, oy)
 		end
 		attach(n, o.parent)
 		ui.texts[n] = str or ""
+		ui.base[n] = k
+		if o.fit then
+			ui.fitw[n] = o.fit
+			fit(n)
+		end
 		return n
 	end
 
@@ -99,6 +127,7 @@ function M.new(scale, ox, oy)
 		if ui.texts[n] ~= str then
 			ui.texts[n] = str
 			gui.set_text(n, str)
+			fit(n)
 		end
 	end
 
@@ -108,7 +137,7 @@ function M.new(scale, ox, oy)
 		o = o or {}
 		local n = ui.box(x, y, w, h, { color = o.color or M.C.btn, parent = o.parent, tex = o.tex, slice = o.slice })
 		local b = { id = id, node = n, x = x, y = y, w = w, h = h, fn = fn, enabled = true, modal = o.modal, color = o.color or M.C.btn, group = o.parent }
-		if o.label then b.label = ui.text(x, y, o.label, { size = o.size or 22, font = o.font, parent = o.parent }) end
+		if o.label then b.label = ui.text(x, y, o.label, { size = o.size or 22, font = o.font, parent = o.parent, fit = w - 14 }) end
 		ui.buttons[#ui.buttons + 1] = b
 		ui.buttons[id] = b
 		return b
@@ -166,7 +195,7 @@ function M.fmt_time(t)
 end
 
 function M.fmt_num(n)
-	if n >= 10000 then return string.format("%.1fB", n / 1000) end
+	if n >= 10000 then return I.t("num.thousand", { n = math.floor(n / 100) / 10 }) end
 	return tostring(math.floor(n))
 end
 

@@ -2,11 +2,6 @@
 -- Diziler 1'den başlar (TIERS[1] = Ahşap).
 return {
   ARCHES = { "melee", "ranged", "heavy" },
-  ARCH_LABEL = {
-    melee = "Yakın dövüş",
-    ranged = "Menzilli",
-    heavy = "Ağır",
-  },
   BASE_DMG_MULT = {
     melee = 1,
     ranged = 0.6,
@@ -41,20 +36,16 @@ return {
   CARDS = {
     {
       id = "foundry",
-      name = "Döküm Ustalığı",
       icon = "⚒️",
-      cat = "ordu",
-      desc = "Ağır golemler %25 ucuz.",
+      cat = "army",
       mods = {
         heavyCost = 0.75,
       },
     },
     {
       id = "alloy",
-      name = "Hafif Alaşım",
       icon = "🪶",
-      cat = "ordu",
-      desc = "Birimler %15 hızlı yürür, %20 hızlı üretilir.",
+      cat = "army",
       mods = {
         speed = 1.15,
         train = 0.8,
@@ -62,30 +53,24 @@ return {
     },
     {
       id = "vital",
-      name = "Diri Çekirdek",
       icon = "💚",
-      cat = "ordu",
-      desc = "Tüm birimlerin canı +%15.",
+      cat = "army",
       mods = {
         unitHp = 1.15,
       },
     },
     {
       id = "warcry",
-      name = "Savaş Narası",
       icon = "📯",
-      cat = "ordu",
-      desc = "Tüm birimler +%12 hasar verir.",
+      cat = "army",
       mods = {
         unitDmg = 1.12,
       },
     },
     {
       id = "marksman",
-      name = "Keskin Nişan",
       icon = "🎯",
-      cat = "ordu",
-      desc = "Menzilliler +%25 hasar, +%15 menzil.",
+      cat = "army",
       mods = {
         rangedDmg = 1.25,
         rangedRange = 1.15,
@@ -93,50 +78,40 @@ return {
     },
     {
       id = "loot",
-      name = "Ganimet Simyası",
       icon = "💰",
-      cat = "ekonomi",
-      desc = "Öldürmelerden %35 fazla altın.",
+      cat = "economy",
       mods = {
         bounty = 1.35,
       },
     },
     {
       id = "vein",
-      name = "Altın Damarı",
       icon = "⛏️",
-      cat = "ekonomi",
-      desc = "Pasif gelir +%35.",
+      cat = "economy",
       mods = {
         income = 1.35,
       },
     },
     {
       id = "wisdom",
-      name = "Bilgelik Taşı",
       icon = "📜",
-      cat = "ekonomi",
-      desc = "Tüm XP kazancı +%35: sonraki çağa daha erken geçersin.",
+      cat = "economy",
       mods = {
         xp = 1.35,
       },
     },
     {
       id = "ricochet",
-      name = "Seken Atış",
       icon = "🔁",
-      cat = "savunma",
-      desc = "Kule ve karakol atışları yakındaki bir düşmana daha seker (%50).",
+      cat = "defense",
       mods = {
         turretBounce = 0.5,
       },
     },
     {
       id = "lens",
-      name = "Gözcü Merceği",
       icon = "🔭",
-      cat = "savunma",
-      desc = "Kule ve karakol menzili +%20, hasarı +%15.",
+      cat = "defense",
       mods = {
         turretRange = 1.2,
         turretDmg = 1.15,
@@ -144,10 +119,8 @@ return {
     },
     {
       id = "masonry",
-      name = "Taş Örgü",
       icon = "🧱",
-      cat = "savunma",
-      desc = "Karakolların canı +%40; savaşmazken kendini onarır.",
+      cat = "defense",
       mods = {
         outpostHp = 1.4,
         outpostRegen = 0.03,
@@ -155,40 +128,32 @@ return {
     },
     {
       id = "rampart",
-      name = "Sur Tahkimi",
       icon = "🏰",
-      cat = "savunma",
-      desc = "Kale canı +%30.",
+      cat = "defense",
       mods = {
         castleHp = 1.3,
       },
     },
     {
       id = "echo",
-      name = "Çifte Yağmur",
       icon = "☄️",
-      cat = "güç",
-      desc = "Özel güç 1 sn sonra aynı yere ikinci kez vurur (%60).",
+      cat = "power",
       mods = {
         specialEcho = 0.6,
       },
     },
     {
       id = "distill",
-      name = "Hızlı Damıtma",
       icon = "⚗️",
-      cat = "güç",
-      desc = "Özel güç %40 daha sık hazır olur.",
+      cat = "power",
       mods = {
         specialCd = 0.6,
       },
     },
     {
       id = "banner",
-      name = "Sancaktar",
       icon = "🚩",
-      cat = "güç",
-      desc = "Komutan +%30 can ve hasar; yeteneği %30 daha sık.",
+      cat = "power",
       mods = {
         cmdPower = 1.3,
         cmdCd = 0.7,
@@ -203,11 +168,9 @@ return {
   CMD_LEAP = 150,
   CMD_LEVELS = { 0, 3, 8, 15, 25 },
   CMD_LEVEL_BONUS = 0.12,
-  CMD_NAMES = { "Kütük Komutan", "Bronz Komutan", "Demir Komutan", "Kristal Komutan", "Eter Komutanı" },
   CMD_REACH = 280,
   CMD_RESPAWN = 30,
   CMD_SKILL_CD = 28,
-  CMD_SKILL_NAME = "Sarsıcı Darbe",
   CMD_SLAM_MULT = 3,
   CMD_SLAM_R = 85,
   CMD_SPAWN_DELAY = 3,
@@ -267,19 +230,13 @@ return {
   SOURCE_GOLD_S = 45,
   SOURCE_KINDS = {
     gold = {
-      name = "Altın Pınarı",
       icon = "💰",
-      desc = "45 saniyelik gelir kadar altın",
     },
     fury = {
-      name = "Eter Öfkesi",
       icon = "🔥",
-      desc = "25 sn boyunca tüm birimlerin +%30 hasar, +%20 hız",
     },
     heal = {
-      name = "Yaşam Pınarı",
       icon = "💚",
-      desc = "Tüm birimler tam can; kale ve karakollar onarılır",
     },
   },
   SOURCE_KIND_LIST = { "gold", "fury", "heal" },
@@ -301,7 +258,6 @@ return {
     {
       index = 0,
       key = "wood",
-      name = "Ahşap",
       xpToReach = 0,
       baseHp = 1500,
       income = 2.5,
@@ -321,14 +277,11 @@ return {
           speed = 50,
           train = 0.9,
           radius = 13,
-          name = "Kütük Muhafız",
           arch = "melee",
           tier = 0,
           bounty = 15,
           xp = 20,
           ability = {
-            name = "Kök Salma",
-            desc = "Savaşmıyorken saniyede canının %4'ünü yeniler",
             p = {
               regen = 0.04,
             },
@@ -343,14 +296,11 @@ return {
           speed = 46,
           train = 1.1,
           radius = 12,
-          name = "Söğüt Okçu",
           arch = "ranged",
           tier = 0,
           bounty = 23,
           xp = 30,
           ability = {
-            name = "Seri Atış",
-            desc = "İlk 3 okunu çok hızlı atar",
             p = {
               rapid = 3,
             },
@@ -365,14 +315,11 @@ return {
           speed = 34,
           train = 2,
           radius = 24,
-          name = "Meşe Golem",
           arch = "heavy",
           tier = 0,
           bounty = 60,
           xp = 80,
           ability = {
-            name = "Fidan",
-            desc = "Ölünce yakındaki dostlarını canlarının %35'i kadar iyileştirir",
             p = {
               deathHeal = {
                 r = 130,
@@ -383,17 +330,13 @@ return {
         },
       },
       special = {
-        name = "Kozalak Yağmuru",
         damage = 70,
       },
       turrets = {
         {
-          name = "Ok Kulesi",
           tier = 0,
           grade = 0,
-          label = "Hafif",
           kind = "shot",
-          desc = "Seri atış, tek hedef",
           cost = 75,
           dmg = 4.8,
           range = 300,
@@ -406,12 +349,9 @@ return {
           burnDur = 0,
         },
         {
-          name = "Kozalak Mancınığı",
           tier = 0,
           grade = 1,
-          label = "Orta",
           kind = "lob",
-          desc = "Bomba: alan hasarı",
           cost = 140,
           dmg = 10.2,
           range = 360,
@@ -424,12 +364,9 @@ return {
           burnDur = 0,
         },
         {
-          name = "Kütük Katapultu",
           tier = 0,
           grade = 2,
-          label = "Ağır",
           kind = "lob",
-          desc = "Bomba: alan hasarı",
           cost = 280,
           dmg = 21.6,
           range = 440,
@@ -451,7 +388,6 @@ return {
     {
       index = 1,
       key = "bronze",
-      name = "Bronz",
       xpToReach = 900,
       baseHp = 3000,
       income = 6,
@@ -471,14 +407,11 @@ return {
           speed = 52,
           train = 1,
           radius = 13,
-          name = "Bronz Muhafız",
           arch = "melee",
           tier = 1,
           bounty = 38,
           xp = 50,
           ability = {
-            name = "Kalkan",
-            desc = "Menzilli saldırıların %35'ini bloklar",
             p = {
               block = 0.35,
             },
@@ -493,14 +426,11 @@ return {
           speed = 48,
           train = 1.2,
           radius = 12,
-          name = "Bronz Arbaletçi",
           arch = "ranged",
           tier = 1,
           bounty = 53,
           xp = 70,
           ability = {
-            name = "Zırh Delici",
-            desc = "Kalkan ve zırhı yok sayar, ağırlara +%25 hasar",
             p = {
               pierceArmor = true,
               heavyBonus = 0.25,
@@ -516,14 +446,11 @@ return {
           speed = 36,
           train = 2.1,
           radius = 24,
-          name = "Bronz Boğa",
           arch = "heavy",
           tier = 1,
           bounty = 143,
           xp = 190,
           ability = {
-            name = "Boğa Hücumu",
-            desc = "Çatışmaya girerken 2 kat vurur ve hedefi geri iter",
             p = {
               charge = {
                 mult = 2,
@@ -534,17 +461,13 @@ return {
         },
       },
       special = {
-        name = "Erimiş Bronz",
         damage = 154,
       },
       turrets = {
         {
-          name = "Bronz Yay",
           tier = 1,
           grade = 0,
-          label = "Hafif",
           kind = "shot",
-          desc = "Seri atış, tek hedef",
           cost = 185,
           dmg = 10.6,
           range = 300,
@@ -557,12 +480,9 @@ return {
           burnDur = 0,
         },
         {
-          name = "Bronz Balista",
           tier = 1,
           grade = 1,
-          label = "Orta",
           kind = "pierce",
-          desc = "Delici ok: hattaki 3 düşmanı geçer",
           cost = 335,
           dmg = 21.1,
           range = 360,
@@ -575,12 +495,9 @@ return {
           burnDur = 0,
         },
         {
-          name = "Ateş Kazanı",
           tier = 1,
           grade = 2,
-          label = "Ağır",
           kind = "fire",
-          desc = "Ateş: düştüğü yeri 3 sn yakar",
           cost = 670,
           dmg = 26.4,
           range = 440,
@@ -602,7 +519,6 @@ return {
     {
       index = 2,
       key = "iron",
-      name = "Demir",
       xpToReach = 3200,
       baseHp = 6000,
       income = 14.4,
@@ -622,14 +538,11 @@ return {
           speed = 54,
           train = 1.1,
           radius = 13,
-          name = "Demir Şövalye",
           arch = "melee",
           tier = 2,
           bounty = 86,
           xp = 115,
           ability = {
-            name = "Ağır Zırh",
-            desc = "Yakın dövüş saldırılarından %25 az hasar alır",
             p = {
               armor = 0.25,
             },
@@ -644,14 +557,11 @@ return {
           speed = 50,
           train = 1.3,
           radius = 12,
-          name = "Demir Topçu",
           arch = "ranged",
           tier = 2,
           bounty = 131,
           xp = 175,
           ability = {
-            name = "Top Güllesi",
-            desc = "Hedefin çevresindekilere %50 alan hasarı verir",
             p = {
               splash = {
                 r = 45,
@@ -669,14 +579,11 @@ return {
           speed = 38,
           train = 2.2,
           radius = 24,
-          name = "Demir Dev",
           arch = "heavy",
           tier = 2,
           bounty = 345,
           xp = 460,
           ability = {
-            name = "Kuşatma Ustası",
-            desc = "Kalelere ve karakollara 2,5 kat hasar verir",
             p = {
               siege = 2.5,
             },
@@ -684,17 +591,13 @@ return {
         },
       },
       special = {
-        name = "Gülle Yağmuru",
         damage = 339,
       },
       turrets = {
         {
-          name = "Tüfek Mazgalı",
           tier = 2,
           grade = 0,
-          label = "Hafif",
           kind = "shot",
-          desc = "Seri atış, tek hedef",
           cost = 445,
           dmg = 23.2,
           range = 300,
@@ -707,12 +610,9 @@ return {
           burnDur = 0,
         },
         {
-          name = "Demir Top",
           tier = 2,
           grade = 1,
-          label = "Orta",
           kind = "lob",
-          desc = "Bomba: alan hasarı",
           cost = 805,
           dmg = 49.4,
           range = 360,
@@ -725,12 +625,9 @@ return {
           burnDur = 0,
         },
         {
-          name = "Havan Topu",
           tier = 2,
           grade = 2,
-          label = "Ağır",
           kind = "lob",
-          desc = "Bomba: alan hasarı",
           cost = 1615,
           dmg = 104.5,
           range = 440,
@@ -752,7 +649,6 @@ return {
     {
       index = 3,
       key = "crystal",
-      name = "Kristal",
       xpToReach = 10000,
       baseHp = 12000,
       income = 34.6,
@@ -772,14 +668,11 @@ return {
           speed = 56,
           train = 1.2,
           radius = 13,
-          name = "Kristal Kılıççı",
           arch = "melee",
           tier = 3,
           bounty = 206,
           xp = 275,
           ability = {
-            name = "Yansıtma",
-            desc = "Aldığı yakın dövüş hasarının %25'ini saldırana geri vurur",
             p = {
               reflect = 0.25,
             },
@@ -794,14 +687,11 @@ return {
           speed = 52,
           train = 1.4,
           radius = 12,
-          name = "Prizma Büyücü",
           arch = "ranged",
           tier = 3,
           bounty = 311,
           xp = 415,
           ability = {
-            name = "Delici Işın",
-            desc = "Işını hattaki 2 düşmanı birden vurur",
             p = {
               pierce = 2,
             },
@@ -816,14 +706,11 @@ return {
           speed = 40,
           train = 2.3,
           radius = 24,
-          name = "Kuvars Golem",
           arch = "heavy",
           tier = 3,
           bounty = 829,
           xp = 1105,
           ability = {
-            name = "Buz Yumruğu",
-            desc = "Vurduğu düşmanı 1,5 sn yavaşlatır",
             p = {
               slowOnHit = 1.5,
             },
@@ -831,17 +718,13 @@ return {
         },
       },
       special = {
-        name = "Kristal Sağanağı",
         damage = 745,
       },
       turrets = {
         {
-          name = "Kristal Diken",
           tier = 3,
           grade = 0,
-          label = "Hafif",
           kind = "frost",
-          desc = "Buz: hedefi 1,5 sn yavaşlatır",
           cost = 1065,
           dmg = 40.9,
           range = 300,
@@ -854,12 +737,9 @@ return {
           burnDur = 0,
         },
         {
-          name = "Prizma Kulesi",
           tier = 3,
           grade = 1,
-          label = "Orta",
           kind = "beam",
-          desc = "Lazer: anında, hattaki 3 düşmanı deler",
           cost = 1935,
           dmg = 102.2,
           range = 360,
@@ -872,12 +752,9 @@ return {
           burnDur = 0,
         },
         {
-          name = "Işın Merceği",
           tier = 3,
           grade = 2,
-          label = "Ağır",
           kind = "beam",
-          desc = "Lazer: anında, hattaki 8 düşmanı deler",
           cost = 3870,
           dmg = 191.7,
           range = 440,
@@ -899,7 +776,6 @@ return {
     {
       index = 4,
       key = "aether",
-      name = "Eter",
       xpToReach = 30000,
       baseHp = 24000,
       income = 82.9,
@@ -919,14 +795,11 @@ return {
           speed = 58,
           train = 1.3,
           radius = 13,
-          name = "Eter Bekçisi",
           arch = "melee",
           tier = 4,
           bounty = 499,
           xp = 665,
           ability = {
-            name = "Ruh Bedeni",
-            desc = "İlk ölümünde %40 canla geri döner",
             p = {
               revive = 0.4,
             },
@@ -941,14 +814,11 @@ return {
           speed = 54,
           train = 1.5,
           radius = 12,
-          name = "Eter Gözü",
           arch = "ranged",
           tier = 4,
           bounty = 746,
           xp = 995,
           ability = {
-            name = "Zincir Şimşek",
-            desc = "Saldırısı yakındaki bir düşmana daha sıçrar (%60)",
             p = {
               chain = {
                 pct = 0.6,
@@ -965,14 +835,11 @@ return {
           speed = 42,
           train = 2.4,
           radius = 24,
-          name = "Eter Titanı",
           arch = "heavy",
           tier = 4,
           bounty = 1991,
           xp = 2655,
           ability = {
-            name = "Komutan Aurası",
-            desc = "Yakınındaki dostlar %20 fazla hasar verir",
             p = {
               aura = {
                 r = 140,
@@ -983,17 +850,13 @@ return {
         },
       },
       special = {
-        name = "Eter Fırtınası",
         damage = 1640,
       },
       turrets = {
         {
-          name = "Eter Kıvılcımı",
           tier = 4,
           grade = 0,
-          label = "Hafif",
           kind = "chain",
-          desc = "Zincir şimşek: 3 hedefe sıçrar",
           cost = 2555,
           dmg = 95.6,
           range = 300,
@@ -1006,12 +869,9 @@ return {
           burnDur = 0,
         },
         {
-          name = "Eter Kristali",
           tier = 4,
           grade = 1,
-          label = "Orta",
           kind = "chain",
-          desc = "Zincir şimşek: 4 hedefe sıçrar",
           cost = 4645,
           dmg = 238.9,
           range = 360,
@@ -1024,12 +884,9 @@ return {
           burnDur = 0,
         },
         {
-          name = "Yıldız Çekirdeği",
           tier = 4,
           grade = 2,
-          label = "Ağır",
           kind = "lob",
-          desc = "Bomba: alan hasarı, yavaşlatır",
           cost = 9290,
           dmg = 477.9,
           range = 440,
@@ -1051,21 +908,18 @@ return {
   },
   TURRET_GRADES = {
     {
-      label = "Hafif",
       costMult = 0.55,
       dmgMult = 0.4,
       cd = 0.55,
       range = 300,
     },
     {
-      label = "Orta",
       costMult = 1,
       dmgMult = 1,
       cd = 1.1,
       range = 360,
     },
     {
-      label = "Ağır",
       costMult = 2,
       dmgMult = 2,
       cd = 1.7,

@@ -22,13 +22,6 @@ function generateCode(): string {
   }
 }
 
-/**
- * Botların `name` alanı yalnızca adı botKind'dan çevirmeyen istemciler içindir: şu an tek örneği,
- * henüz yalnızca Türkçe olan mobil (Defold) istemci. Web istemcisi adı botKind'dan kendi dilinde yazar.
- * Mobil çok dilli olunca bu 'en' yapılabilir.
- */
-const LEGACY_NAME_LANG = 'tr';
-
 function cleanName(raw: unknown): string {
   const s = typeof raw === 'string' ? raw.replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 16) : '';
   return s || 'Alchemist';
@@ -61,7 +54,8 @@ export class BattleRoom extends Room<{ state: BattleState }> {
     if (mode === 'bot') {
       this.maxClients = 1;
       const level: BotLevel = options?.level === 'easy' || options?.level === 'hard' ? options.level : 'normal';
-      const botPlayer = this.sim.addPlayer('bot', botName(level, LEGACY_NAME_LANG), true, level);
+      // name İngilizce yedek ad; istemciler bot adını botKind'dan kendi dillerinde yazar
+      const botPlayer = this.sim.addPlayer('bot', botName(level), true, level);
       this.bot = new Bot(this.sim, botPlayer, level);
     }
 
@@ -69,7 +63,7 @@ export class BattleRoom extends Room<{ state: BattleState }> {
       // Eğitim: rakip tarafı senaryolu eğitmen oynar. Adım ilerlemesi sunucu günlüğüne yazılır
       // (oyuncuların nerede bıraktığını görmek için).
       this.maxClients = 1;
-      const tutor = this.sim.addPlayer('bot', botName('tutor', LEGACY_NAME_LANG), true, 'tutor');
+      const tutor = this.sim.addPlayer('bot', botName('tutor'), true, 'tutor');
       this.tutorial = new Tutorial(this.sim, tutor, (m) => console.log(`[eğitim ${this.roomId}] ${m}`));
     }
 

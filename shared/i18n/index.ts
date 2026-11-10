@@ -38,7 +38,7 @@ export function getLang(): Lang {
 }
 
 /** Languages that write decimals with a comma (1,5). */
-const DECIMAL_COMMA = new Set<string>(['tr', 'de', 'fr', 'es', 'pt']);
+export const DECIMAL_COMMA = new Set<string>(['tr', 'de', 'fr', 'es', 'pt']);
 
 /** Decimal number in the language's format (1.5 / 1,5). digits: fixed decimals (toFixed). */
 export function fmtDec(n: number, digits?: number, lang: Lang = current): string {

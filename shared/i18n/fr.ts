@@ -380,4 +380,17 @@ export const fr: Record<keyof typeof en, string> = {
   'float.level': 'Niveau {n} !',
   'float.cmdDownMine': 'Ton commandant est tombé !',
   'float.cmdDownFoe': 'Commandant ennemi abattu !',
+
+  // ── mobile (Defold) client only ──
+  'mobile.version': 'Prototype mobile v0.1',
+  'mobile.dragHint': "Les golems avancent seuls. Fais glisser l'écran pour parcourir la carte.",
+  'mobile.soundOn': 'Son activé',
+  'mobile.soundOff': 'Son coupé',
+  'mobile.musicOn': 'Musique activée',
+  'mobile.musicOff': 'Musique coupée',
+  'mobile.sound': 'Son',
+  'mobile.muted': 'Muet',
+  'mobile.leave': 'Sortir',
+  'mobile.outpostHp': 'Poste {p}',
+  'mobile.noServer': 'Impossible de joindre le serveur. Vérifie ta connexion Internet.',
 };

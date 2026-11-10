@@ -382,4 +382,17 @@ export const en = {
   'float.level': 'Level {n}!',
   'float.cmdDownMine': 'Your commander fell!',
   'float.cmdDownFoe': 'Enemy commander down!',
+
+  // ── mobile (Defold) client only ──
+  'mobile.version': 'Mobile prototype v0.1',
+  'mobile.dragHint': 'Golems march on their own. Drag the screen to move around the map.',
+  'mobile.soundOn': 'Sound on',
+  'mobile.soundOff': 'Sound off',
+  'mobile.musicOn': 'Music on',
+  'mobile.musicOff': 'Music off',
+  'mobile.sound': 'Sound',
+  'mobile.muted': 'Muted',
+  'mobile.leave': 'Leave',
+  'mobile.outpostHp': 'Outpost {p}',
+  'mobile.noServer': 'Could not reach the server. Check your internet connection.',
 } satisfies Record<string, string>;

@@ -8,6 +8,7 @@ local units = require("main.units")
 local world = require("main.world")
 local sfx = require("main.sfx")
 local music = require("main.music")
+local I = require("shared.i18n")
 
 local UI = msg.url("main:/ui#gui")
 local VIEW_H = 720
@@ -41,7 +42,7 @@ local function cmd_fx(self, e)
 	local tier = v and v.tier or 0
 	if e.k == "spawn" then
 		fx.emit("glow" .. tier, 18, x, y)
-		if mine then fx.float_text(x, GROUND_Y - 110, "Komutan sahada!", "#ffe08a") end
+		if mine then fx.float_text(x, GROUND_Y - 110, I.t("float.cmdArrives"), "#ffe08a") end
 	elseif e.k == "leap" then
 		units.leap(e.id, e.x)
 		fx.emit("smoke", 4, x, GROUND_Y - 6)
@@ -51,7 +52,7 @@ local function cmd_fx(self, e)
 		fx.emit("chunks" .. tier, 14, x, GROUND_Y - 6)
 		fx.emit("smoke", 6, x, GROUND_Y - 6)
 		fx.emit("spark", 12, x, GROUND_Y - 20)
-		fx.float_text(x, GROUND_Y - 120, B.CMD_SKILL_NAME .. "!", mine and "#ffe08a" or "#ff9a9a")
+		fx.float_text(x, GROUND_Y - 120, I.t("cmd.skill") .. "!", mine and "#ffe08a" or "#ff9a9a")
 		if on_screen(self, x) then
 			fx.shake(0.14, 0.004)
 			sfx.play("boom")
@@ -61,10 +62,10 @@ local function cmd_fx(self, e)
 	elseif e.k == "level" then
 		fx.emit("glow" .. tier, 24, x, y)
 		fx.ring(x, y, 0xffe08a, 0.2, 0.2, 2.4, 2.4, 0.5, 970)
-		fx.float_text(x, GROUND_Y - 120, "Seviye " .. tostring(e.lvl) .. "!", mine and "#ffe08a" or "#ffb0b0")
+		fx.float_text(x, GROUND_Y - 120, I.t("float.level", { n = e.lvl or 1 }), mine and "#ffe08a" or "#ffb0b0")
 		if mine then sfx.play("evolve") end
 	elseif e.k == "die" then
-		fx.float_text(x, GROUND_Y - 110, mine and "Komutanın düştü!" or "Rakip komutan düştü!", mine and "#ff9a9a" or "#ffe08a")
+		fx.float_text(x, GROUND_Y - 110, I.t(mine and "float.cmdDownMine" or "float.cmdDownFoe"), mine and "#ff9a9a" or "#ffe08a")
 	end
 end
 
@@ -78,18 +79,18 @@ local function on_fx(self, e)
 		if e.k == "destroyed" then
 			world.explosion(x, GROUND_Y - 20, 2, 70)
 			fx.emit("chunks0", 16, x, GROUND_Y - 40)
-			fx.float_text(x, GROUND_Y - 130, "Karakol yıkıldı" .. (mine and "!" or ""), mine and "#ff9a9a" or "#ffd34d")
+			fx.float_text(x, GROUND_Y - 130, I.t(mine and "float.outpostLost" or "float.outpostKill"), mine and "#ff9a9a" or "#ffd34d")
 		elseif e.k == "built" then
 			fx.emit("smoke", 6, x, GROUND_Y - 10)
 			fx.emit("spark", 10, x, GROUND_Y - 60)
 		elseif e.k == "captured" then
 			fx.emit("spark", 8, x - 20, GROUND_Y - 80)
-			fx.float_text(x, GROUND_Y - 120, mine and "Nokta alındı!" or "Nokta kaybedildi", mine and "#9fd0ff" or "#ff9a9a")
+			fx.float_text(x, GROUND_Y - 120, I.t(mine and "float.pointTaken" or "float.pointLost"), mine and "#9fd0ff" or "#ff9a9a")
 		end
 	elseif t == "heal" then
 		local x = units.sx(e.x)
 		for _ = 1, 14 do fx.emit("heal", 1, x + (math.random() * 2 - 1) * e.r, GROUND_Y - 10 - math.random() * 30) end
-		fx.float_text(x, GROUND_Y - 70, "İyileştirme", "#8dff9a")
+		fx.float_text(x, GROUND_Y - 70, I.t("float.heal"), "#8dff9a")
 	elseif t == "cmd" then
 		cmd_fx(self, e)
 	elseif t == "src" then
@@ -100,7 +101,7 @@ local function on_fx(self, e)
 		if e.k == "taken" then
 			local info = B.SOURCE_KINDS[e.kind]
 			local mine = e.side == net.side
-			fx.float_text(x, GROUND_Y - 150, info and info.name or "", mine and "#9fffb0" or "#ff9a9a")
+			fx.float_text(x, GROUND_Y - 150, info and I.source_name(e.kind) or "", mine and "#9fffb0" or "#ff9a9a")
 			if mine and e.kind == "heal" then
 				for _ = 1, 30 do fx.emit("heal", 1, math.random(-100, B.WORLD_W + 100), GROUND_Y - 10 - math.random() * 40) end
 			end
@@ -116,11 +117,11 @@ local function on_fx(self, e)
 		local x, y = v.x, v.y - v.height * 0.6
 		if e.k == "block" then
 			fx.emit("spark", 4, x + v.dir * 14, y)
-			if math.random() < 0.5 then fx.float_text(x, v.y - v.height - 16, "Blok!", "#a8d8ff") end
+			if math.random() < 0.5 then fx.float_text(x, v.y - v.height - 16, I.t("float.block"), "#a8d8ff") end
 		elseif e.k == "revive" then
 			fx.emit("glow4", 24, x, y)
 			fx.ring(x, y, 0xc9a8ff, 0.2, 0.2, 2.2, 2.2, 0.5, 970)
-			fx.float_text(x, v.y - v.height - 16, "Diriliş!", "#d9c2ff")
+			fx.float_text(x, v.y - v.height - 16, I.t("float.revive"), "#d9c2ff")
 			if on_screen(self, x) then sfx.play("evolve") end
 		elseif e.k == "charge" then
 			fx.emit("smoke", 4, x, v.y - 6)

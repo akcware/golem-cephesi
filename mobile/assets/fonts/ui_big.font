@@ -12,4 +12,4 @@ all_chars: false
 cache_width: 0
 cache_height: 0
 render_mode: MODE_SINGLE_LAYER
-characters: " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~çÇğĞıİöÖşŞüÜâÂîÎûÛ·×…–—•"
+characters: " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~çÇğĞıİöÖşŞüÜâÂîÎûÛ·×…–—• ¡«»¿ÀÁÃÄÈÉÊËÍÏÑÓÔÕÙÚßàáãäèéêëíïñóôõùúÿŒœ’›"

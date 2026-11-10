@@ -380,4 +380,17 @@ export const tr: Record<keyof typeof en, string> = {
   'float.level': 'Seviye {n}!',
   'float.cmdDownMine': 'Komutanın düştü!',
   'float.cmdDownFoe': 'Rakip komutan düştü!',
+
+  // ── yalnızca mobil (Defold) istemci ──
+  'mobile.version': 'Mobil prototip v0.1',
+  'mobile.dragHint': 'Golemler kendiliğinden yürür. Ekranı sürükleyerek haritada gezin.',
+  'mobile.soundOn': 'Ses açık',
+  'mobile.soundOff': 'Ses kapalı',
+  'mobile.musicOn': 'Müzik açık',
+  'mobile.musicOff': 'Müzik kapalı',
+  'mobile.sound': 'Ses',
+  'mobile.muted': 'Sessiz',
+  'mobile.leave': 'Çık',
+  'mobile.outpostHp': 'Karakol {p}',
+  'mobile.noServer': 'Sunucuya bağlanılamadı. İnternet bağlantını kontrol et.',
 };

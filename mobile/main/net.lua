@@ -2,6 +2,7 @@
 -- o betiğin bağlamında çalışır, dünya nesnelerine dokunabilir. Arayüz durumu buradan okur,
 -- komutları game.script'e mesajla yollar.
 local Colyseus = require("colyseus.sdk")
+local I = require("shared.i18n")
 
 local M = {
 	room = nil,
@@ -33,12 +34,12 @@ local function error_text(err)
 	local msg = type(err) == "table" and tostring(err.message or err.error or err.code or "") or tostring(err or "")
 	local low = string.lower(msg)
 	if low:find("not found") or low:find("locked") or low:find("full") or low:find("invalid") then
-		return "Oda bulunamadı ya da dolu. Kodu kontrol et."
+		return I.t("net.notFound")
 	end
 	if msg == "" or low:find("connect") or low:find("network") or low:find("timeout") or low:find("refused") then
-		return "Sunucuya bağlanılamadı. İnternet bağlantını kontrol et."
+		return I.t("mobile.noServer")
 	end
-	return "Bağlanılamadı: " .. msg
+	return I.t("net.failedWith", { msg = msg })
 end
 
 --- mode: "bot" | "quick" | "private" | "join"
@@ -56,7 +57,7 @@ function M.join(opts, cb)
 		M.side = -1
 		cb(nil, room)
 	end
-	local name = opts.name or "Simyacı"
+	local name = opts.name or I.t("player.default")
 	if opts.mode == "bot" then
 		c:create("battle", { mode = "bot", name = name, level = opts.level or "normal" }, done)
 	elseif opts.mode == "quick" then

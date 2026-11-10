@@ -5,6 +5,7 @@ local U = require("main.util")
 local B = require("shared.balance")
 local A = require("shared.art_data")
 local fx = require("main.fx")
+local I = require("shared.i18n")
 
 local M = {}
 
@@ -304,7 +305,7 @@ local function sync_view(v, u, dt, time)
 		end
 		if u.lvl ~= v.lvl then
 			v.lvl = u.lvl
-			go.set(v.url.lvl, "text", "Sv" .. u.lvl)
+			go.set(v.url.lvl, "text", I.t("cmd.lvl", { n = u.lvl }))
 		end
 	end
 	local moving = u.state == 0 or u.state == 3

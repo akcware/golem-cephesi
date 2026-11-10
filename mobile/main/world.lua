@@ -5,6 +5,7 @@ local B = require("shared.balance")
 local A = require("shared.art_data")
 local fx = require("main.fx")
 local units = require("main.units")
+local I = require("shared.i18n")
 
 local M = {}
 
@@ -399,9 +400,11 @@ local function sync_players(st)
 		if last_base_hp[ci + 1] >= 0 and p.baseHp < last_base_hp[ci + 1] - 0.01 then base_hit_fx(ci, p.tier) end
 		last_base_hp[ci + 1] = p.baseHp
 		castle_damage(ci, p.baseMaxHp > 0 and p.baseHp / p.baseMaxHp or 1, st.phase == "playing" or st.phase == "ended")
-		if c.name ~= p.name then
-			c.name = p.name
-			go.set(c.label, "text", p.name)
+		-- botların adı izleyenin dilinde
+		local name = I.player_name(p)
+		if c.name ~= name then
+			c.name = name
+			go.set(c.label, "text", name)
 		end
 		if ci == 0 then M.show_rally(p.stance == "hold" and st.phase ~= "ended") end
 

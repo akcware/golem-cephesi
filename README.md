@@ -83,8 +83,10 @@ npm run i18n:check
 Bu araç oyun verisinden kurulan tüm anahtarların her dilde olduğunu, yer tutucuların (`{n}`) ve HTML etiketlerinin
 İngilizceyle aynı olduğunu denetler.
 
-**Mobil sürüm** henüz yalnızca Türkçe: `tools/export-lua.ts` Türkçe metinleri eski veri alanlarına geri koyar,
-sunucu da botların `name` alanına Türkçe adı yazar (`server/BattleRoom.ts`, `LEGACY_NAME_LANG`).
+**Mobil sürüm** de aynı altı dili konuşur: `tools/export-lua.ts` sözlükleri `mobile/shared/i18n_data.lua`'ya aktarır,
+`mobile/shared/i18n.lua` aynı `t()` ve ad yardımcılarını sunar. Dil cihazın dilinden seçilir, menüdeki dil düğmesine
+dokundukça değişir. Mobil fontlar yalnızca listelenen harfleri içerir: yeni bir dil eklerken `mobile/assets/fonts/*.font`
+dosyalarındaki `characters` satırına o dilin harflerini ekle. Mobilde emoji yok; `⚠`, `🔥` gibi simgeler metinden atılır.
 
 ## Yeni oyuncu rehberi
 
