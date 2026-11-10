@@ -12,7 +12,8 @@
     "start": "tsx server/index.ts",
     "typecheck": "tsc --noEmit",
     "balance": "tsx tools/balance-sim.ts",
-    "mobile:assets": "tsx tools/export-lua.ts && tsx tools/bake-mobile.ts && tsx tools/bake-sounds.ts && tsx tools/bake-music.ts"
+    "mobile:assets": "tsx tools/export-lua.ts && tsx tools/bake-mobile.ts && tsx tools/bake-sounds.ts && tsx tools/bake-music.ts",
+    "icon": "tsx tools/bake-icon.ts"
   },
   "devDependencies": {
     "@napi-rs/canvas": "^1.1.0",

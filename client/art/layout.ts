@@ -12,7 +12,8 @@ export const GROUND_Y = 570;
  * (büyük ekranlarda kamera yakınlaştığında bulanıklaşmasın diye). Aşağıdaki tüm boyut / konum
  * sabitleri (LAYOUT, CASTLE_W/H, MOUNTS, TURRET_*) EKRAN birimindedir, çarpandan bağımsızdır.
  */
-export const ART_SCALE = 2;
+export const ART_SCALE: number = (globalThis as { GOLEM_ART_SCALE?: number }).GOLEM_ART_SCALE ?? 2;
+// GOLEM_ART_SCALE: yalnızca tools/bake-icon.ts kullanır (uygulama ikonu için golemi çok büyük çizer).
 
 /** Kule dokusunun ekran boyutu ve dönme/oturma noktası (0..1, dokuya göre). Dönme noktası kulenin döner tablasının merkezidir. */
 export const TURRET_W = 68;

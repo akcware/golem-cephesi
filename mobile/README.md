@@ -16,6 +16,7 @@ telefondaki oyuncu tarayıcıdaki oyuncuyla aynı maçta oynayabilir.
 | Sesler | `client/sounds.ts` → `mobile/assets/sounds/*.wav` | Web aynı tarifleri canlı sentezler; `tools/bake-sounds.ts` WAV'a döker (telefon hoparlörü için 2,5× güçlendirilmiş) |
 | Müzik | `public/music/*.ogg` → `mobile/assets/music/` | Aynı OGG dosyaları; `tools/bake-music.ts` kopyalar ve ses bileşenlerini üretir (depoya bir kez girer, derleme betikleri kopyalar) |
 | Denge değerleri | `shared/balance.ts` → `mobile/shared/balance_data.lua` | `tools/export-lua.ts` ile Lua'ya aktarılır |
+| Uygulama ikonu | `client/art/` → `mobile/icons/`, `mobile/res/android/`, `public/` | Taş golem, mavi-kırmızı cephe hattı önünde; `npm run icon` (`tools/bake-icon.ts`) yeniden üretir. iOS için `Assets.car` Xcode'un `actool`'u ile derlenir; Android 8+ için adaptive icon (ve Android 13+ tema ikonu) `bundle_resources` ile pakete girer |
 | Sahne, animasyon, efektler | `mobile/main/*.lua` | Web'deki `GameScene`'in Lua karşılığı |
 | Arayüz | `mobile/main/ui.gui_script` | Dokunmatik için baştan tasarlandı |
 
