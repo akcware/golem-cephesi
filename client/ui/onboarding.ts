@@ -19,17 +19,17 @@ function save(key: string, value: string) {
 }
 
 export function tutorialDone(): boolean {
-  return load('gc_tut_done') === '1';
+  return load('gf_tut_done') === '1';
 }
 export function setTutorialDone() {
-  save('gc_tut_done', '1');
+  save('gf_tut_done', '1');
 }
 
 let seen: Set<string> | undefined;
 function seenTips(): Set<string> {
   if (!seen) {
     try {
-      seen = new Set(JSON.parse(load('gc_tips') ?? '[]') as string[]);
+      seen = new Set(JSON.parse(load('gf_tips') ?? '[]') as string[]);
     } catch {
       seen = new Set();
     }
@@ -42,7 +42,7 @@ export function tipSeen(id: string): boolean {
 export function markTip(id: string) {
   const s = seenTips();
   s.add(id);
-  save('gc_tips', JSON.stringify([...s]));
+  save('gf_tips', JSON.stringify([...s]));
 }
 
 /** Şu an koşulu tutan (ve daha önce görülmemiş) ilk ipucu. Sıra önem sırasıdır. */

@@ -16,7 +16,7 @@ interface Voice {
   timer: number;
 }
 
-const KEY = 'gc_music_off';
+const KEY = 'gf_music_off';
 let off = false;
 try {
   off = localStorage.getItem(KEY) === '1';

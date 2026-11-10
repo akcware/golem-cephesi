@@ -68,7 +68,7 @@ type = 2D
 max_count = 0
 
 [android]
-package = com.akcware.golemcephesi
+package = com.akcware.golemforge
 minimum_sdk_version = 21
 version_code = 1
 app_icon_36x36 = /icons/android/icon_36.png
@@ -79,7 +79,7 @@ app_icon_144x144 = /icons/android/icon_144.png
 app_icon_192x192 = /icons/android/icon_192.png
 
 [ios]
-bundle_identifier = com.akcware.golemcephesi
+bundle_identifier = com.akcware.golemforge
 app_icon_76x76 = /icons/ios/icon_76.png
 app_icon_120x120 = /icons/ios/icon_120.png
 app_icon_152x152 = /icons/ios/icon_152.png
@@ -100,5 +100,5 @@ fixed_update_frequency = 60
 resize_game_view = 0
 
 [golem]
-server = wss://golem-cephesi.onrender.com
+server = wss://golem-forge.onrender.com
 dev_server = ws://localhost:2567

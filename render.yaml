@@ -1,7 +1,7 @@
 # Render Blueprint: tek web servisi hem oyun sunucusunu (Colyseus/WebSocket) hem derlenmiş sayfayı sunar.
 services:
   - type: web
-    name: golem-cephesi
+    name: golem-forge
     runtime: node
     plan: free
     # Vite (derleme) ve tsx (çalıştırma) geliştirme paketlerinde; onları da kur

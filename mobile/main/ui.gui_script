@@ -12,7 +12,7 @@ local TUT = require("shared.tutorial_data")
 
 local GAME = msg.url("main:/game#script")
 local VIEW_H = 720
-local SAVE = sys.get_save_file("golem_cephesi", "ayarlar")
+local SAVE = sys.get_save_file("golem_forge", "ayarlar")
 local H_TOUCH = hash("touch")
 local H_TEXT = hash("text")
 local H_MARKED = hash("marked_text")

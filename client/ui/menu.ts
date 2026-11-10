@@ -61,10 +61,10 @@ export class Menu {
     this.nameInput = h('input', {
       id: 'name',
       maxlength: 16,
-      value: load('gc_name', `${t('player.default')}${Math.floor(100 + Math.random() * 900)}`),
+      value: load('gf_name', `${t('player.default')}${Math.floor(100 + Math.random() * 900)}`),
       autocomplete: 'off',
     });
-    this.nameInput.addEventListener('change', () => save('gc_name', this.name));
+    this.nameInput.addEventListener('change', () => save('gf_name', this.name));
 
     this.levelSelect = h(
       'select',
@@ -74,8 +74,8 @@ export class Menu {
       h('option', { value: 'hard', text: t('menu.level.hard') }),
     );
     // ilk maçlar için kolay bot önerilir
-    this.levelSelect.value = load('gc_level', tutorialDone() ? 'normal' : 'easy');
-    this.levelSelect.addEventListener('change', () => save('gc_level', this.levelSelect.value));
+    this.levelSelect.value = load('gf_level', tutorialDone() ? 'normal' : 'easy');
+    this.levelSelect.addEventListener('change', () => save('gf_level', this.levelSelect.value));
 
     this.codeInput = h('input', { class: 'code', maxlength: 4, placeholder: t('menu.code'), autocomplete: 'off', spellcheck: 'false' });
     this.codeInput.addEventListener('input', () => {
@@ -165,7 +165,7 @@ export class Menu {
 
   get name(): string {
     const n = this.nameInput.value.trim().slice(0, 16) || t('player.default');
-    save('gc_name', n);
+    save('gf_name', n);
     return n;
   }
 

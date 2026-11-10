@@ -2,7 +2,7 @@
 // main.ts bu modülü ilk sırada içe aktarır; arayüz kurulmadan dil belli olur.
 import { isLang, setLang, type Lang } from '../shared/i18n';
 
-const KEY = 'gc_lang';
+const KEY = 'gf_lang';
 
 function stored(): Lang | null {
   try {

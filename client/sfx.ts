@@ -6,7 +6,7 @@ let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let muted = false;
 try {
-  muted = localStorage.getItem('gc_muted') === '1';
+  muted = localStorage.getItem('gf_muted') === '1';
 } catch {
   /* depolama yoksa sorun değil */
 }
@@ -89,7 +89,7 @@ export const sfx = {
   toggleMute(): boolean {
     muted = !muted;
     try {
-      localStorage.setItem('gc_muted', muted ? '1' : '0');
+      localStorage.setItem('gf_muted', muted ? '1' : '0');
     } catch {
       /* yoksay */
     }
