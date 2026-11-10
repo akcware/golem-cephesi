@@ -121,7 +121,8 @@ npm run mobile:assets
 Oyuncu sayısı azken hızlı eşleşmede kimse beklemesin diye:
 
 - **Önce gerçek oyuncu:** İlk oyuncu girince rastgele 5–18 sn gerçek bir rakip beklenir. Bu sürede biri gelirse ikisi eşleşir; tam o anda bağlanan biri varsa onu bekler.
-- **Kişilik havuzu (`server/personas.ts`):** 360 kişilik, tohumlu üretildiği için sunucu yeniden başlasa da aynı. Her birinin oyuncu adına benzeyen bir takma adı (`server/names.ts`), gücü (0 acemi … 1 usta) ve tarzı var (saldırgan/temkinli, kuleci, ağır golem sever, rövanşa yatkın, ezilince bırakan). Aynı kişilik aynı anda iki maçta olmaz.
+- **Kişilik havuzu (`server/personas.ts`):** Oyunun 6 dilinin her birinden 120 kişi (720), tohumlu üretildiği için sunucu yeniden başlasa da aynı. Her birinin bölgesine uygun, oyuncu adına benzeyen bir takma adı (`server/names.ts`: o dilin adları ve kelimeleri, plaka kodu / departman / alan kodu gibi sayılar, `TR`/`BR`/`TheReal` gibi etiketler, bir kısmı her yerde görülen İngilizce adlar), gücü (0 acemi … 1 usta) ve tarzı var (saldırgan/temkinli, kuleci, ağır golem sever, rövanşa yatkın, ezilince bırakan). Aynı kişilik aynı anda iki maçta olmaz.
+- **Dile göre rakip:** İstemci arayüz dilini de yollar; rakip %70 olasılıkla oyuncunun dilinden, kalanı herhangi bir bölgeden gelir (Türkçe oynayana çoğunlukla `kartal1907`, `ecem_2004`; Fransızca oynayana `LeLoup`, `enzo.1996`; arada `DarkWolf61` gibi uluslararası adlar).
 - **İstemci ayırt edemez:** Oyuncu kimliği gerçek oturum kimliği gibidir; istemciye `isBot=false` gider (yapay zeka olduğu yalnızca sunucudaki `Player.ai` alanında).
 - **İnsan gibi oynar (`server/bot.ts`):** Gücüne göre kolay ↔ zor bot ayarları arasında kayar, tarzı üstüne biner. Dikkati dalgalanır (bir süre oynar, birkaç saniye oyalanır, ara sıra uzun ara verir); oyalanırken kalesine düşman gelirse tepki süresi sonunda fark eder. Maç başında biraz bekler, çağ kartını okumak ve kademe atlamak zaman alır, acemiler toplanmadan hücum eder, kartı rastgele seçer, özel gücü boşa harcar. Bazı kişilikler ezilince oyunu bırakır. Maç sonunda birkaç saniye düşünüp rövanşı kabul eder ya da odadan çıkar.
 - **Güç ölçeği** (`tools/persona-check.ts`, 40'ar maç; kişiliğin kazanma oranı):
@@ -136,7 +137,7 @@ Oyuncu sayısı azken hızlı eşleşmede kimse beklemesin diye:
 
   Beceriler (toplanıp hücum, karakol, kart seçimi…) her kişilikte biraz farklı güçte açılır; eğri bu yüzden basamaksız. Maçların ~%8'i rakibin oyunu bırakmasıyla biter.
 - **Güce göre rakip:** İstemci cihazda bir güç tahmini tutar (eğitimi bitirmemişse 0.1, bitirmişse 0.25 ile başlar; hızlı eşleşmede kazanınca +0.06, kaybedince −0.08, ilk 8 maçta iki kat). Tahmin, oyuncunun maçların ~%57'sini kazandığı düzeye oturur. Sunucu bu güce en yakın boştaki kişiliği seçer.
-- **Ölçüm:** Her dolgu sunucu günlüğüne yazılır (`[eşleşme ODA] 12 sn sonra yapay zeka rakip: kartal1907 (#41) — oyuncu gücü 0.31, rakip 0.33`). Böylece ne sıklıkta olduğu görülür; oyuncu sayısı artınca kapatılabilir.
+- **Ölçüm:** Her dolgu sunucu günlüğüne yazılır (`[eşleşme ODA] 12 sn sonra yapay zeka rakip: kartal1907 (#161, tr) — oyuncu tr, gücü 0.31, rakip 0.33`). Böylece ne sıklıkta olduğu görülür; oyuncu sayısı artınca kapatılabilir.
 - **Ayarlar:** `BOT_FILL=off` dolguyu kapatır, `BOT_FILL_WAIT=5-18` bekleme aralığını (sn) değiştirir.
 
 ```bash

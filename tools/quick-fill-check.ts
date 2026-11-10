@@ -74,12 +74,15 @@ const client = () => new Client(`http://localhost:${PORT}`);
   await b.leave();
 }
 
-// 3) oyuncunun cihazdaki güç tahmini sunucuya ulaşır; bozuk değer varsayılana düşer
-for (const [skill, want] of [[0.95, '0.95'], ['abc', '0.35']] as const) {
+// 3) oyuncunun cihazdaki güç tahmini ve dili sunucuya ulaşır; bozuk değer varsayılana düşer
+for (const [skill, want, lang, wantLang] of [
+  [0.95, '0.95', 'de', 'de'],
+  ['abc', '0.35', 'xx', '?'],
+] as const) {
   logs.length = 0;
-  const room = await client().joinOrCreate('battle', { mode: 'quick', name: 'Deneme', skill });
+  const room = await client().joinOrCreate('battle', { mode: 'quick', name: 'Deneme', skill, lang });
   await until(() => room.state.phase === 'countdown');
-  check(`güç tahmini ${JSON.stringify(skill)} → ${want}`, logs.some((l) => l.includes(`oyuncu gücü ${want}`)), logs[0]);
+  check(`güç tahmini ${JSON.stringify(skill)} → ${want}, dil ${lang} → ${wantLang}`, logs.some((l) => l.includes(`oyuncu ${wantLang}, gücü ${want}`)), logs[0]);
   await room.leave();
 }
 
@@ -108,6 +111,24 @@ await server.gracefullyShutdown(false);
   const held = Array.from({ length: 30 }, () => acquirePersona(0.5));
   check('aynı kişilik aynı anda iki maçta olmaz', new Set(held.map((p) => p.id)).size === held.length);
   held.forEach(releasePersona);
+
+  // dile göre: rakiplerin çoğu oyuncunun dilinden, bir kısmı karışık
+  const N = 600;
+  const share = (lang?: 'fr') => {
+    const count: Record<string, number> = {};
+    for (let i = 0; i < N; i++) {
+      const p = acquirePersona(Math.random(), '', lang);
+      count[p.region] = (count[p.region] ?? 0) + 1;
+      releasePersona(p);
+    }
+    return count;
+  };
+  const fr = share('fr');
+  const frShare = (fr.fr ?? 0) / N;
+  check('Fransızca oyuncuya rakiplerin çoğu Fransız adlı', frShare > 0.62 && frShare < 0.88, `%${Math.round(frShare * 100)} fr, diğerleri ${Object.keys(fr).filter((k) => k !== 'fr').length} bölge`);
+  const any = share();
+  const top = Math.max(...Object.values(any)) / N;
+  check('dil bilinmezse bölgeler karışık', Object.keys(any).length === 6 && top < 0.3, JSON.stringify(any));
 }
 
 // 6) maç sonu: rövanş kararı birkaç saniye sürer; kimi kabul eder, kimi ayrılır

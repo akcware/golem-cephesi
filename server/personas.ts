@@ -1,10 +1,13 @@
 // Hızlı eşleşmede kimse bulunamayınca maça giren rakiplerin kişilik havuzu.
-// Her kişiliğin sabit bir adı, gücü ve oyun tarzı var; havuz tohumlu üretildiği için sunucu yeniden
-// başlasa da aynı kalır (aynı "oyuncuyla" ileride yine karşılaşılabilir).
+// Her kişiliğin bir bölgesi (oyunun dillerinden biri), sabit bir adı, gücü ve oyun tarzı var; havuz tohumlu
+// üretildiği için sunucu yeniden başlasa da aynı kalır (aynı "oyuncuyla" ileride yine karşılaşılabilir).
+import { LANGS, type Lang } from '../shared/i18n';
 import { gamertag, mulberry32, type Rng } from './names';
 
 export interface Persona {
   id: number;
+  /** Hangi dilden/ülkeden bir oyuncu gibi (adı buna göre) */
+  region: Lang;
   name: string;
   /** Ortalama güç: 0 acemi … 1 usta. Maçtan maça biraz oynar (iyi/kötü gün). */
   skill: number;
@@ -22,30 +25,37 @@ export interface Persona {
   social: number;
 }
 
-const POOL_SIZE = 360;
+/** Her bölgeden bu kadar kişilik */
+const PER_REGION = 120;
 const POOL_SEED = 0x601e3;
+/** Oyuncunun dilinden rakip gelme olasılığı; kalanı her bölgeden (karışık, uluslararası bir lobi gibi). */
+const LOCAL_SHARE = 0.7;
 
 function build(): Persona[] {
   const r: Rng = mulberry32(POOL_SEED);
   const out: Persona[] = [];
   const names = new Set<string>();
-  for (let i = 0; out.length < POOL_SIZE; i++) {
-    const name = gamertag(r);
-    const key = name.toLocaleLowerCase('tr');
-    if (names.has(key)) continue;
-    names.add(key);
-    out.push({
-      id: out.length,
-      name,
-      // biraz ortaya yığılmış dağılım; uçlarda da yeterince kişi kalır
-      skill: 0.65 * r() + 0.35 * r(),
-      aggro: r(),
-      builder: r(),
-      heavy: r(),
-      pace: r(),
-      tilt: r() < 0.3 ? 0.4 + 0.6 * r() : 0.15 * r(),
-      social: r(),
-    });
+  for (const region of LANGS) {
+    let made = 0;
+    while (made < PER_REGION) {
+      const name = gamertag(r, region);
+      const key = name.toLowerCase();
+      if (names.has(key)) continue;
+      names.add(key);
+      made++;
+      out.push({
+        id: out.length,
+        region,
+        name,
+        skill: r(), // her güç düzeyinde yeterince kişi olsun (rakip güce göre seçilir)
+        aggro: r(),
+        builder: r(),
+        heavy: r(),
+        pace: r(),
+        tilt: r() < 0.3 ? 0.4 + 0.6 * r() : 0.15 * r(),
+        social: r(),
+      });
+    }
   }
   return out;
 }
@@ -57,15 +67,19 @@ const inUse = new Set<number>();
 
 /**
  * Hedef güce yakın, şu an boşta olan bir kişilik seçer. avoid: oyuncunun kendi adı (aynı ad çıkmasın).
- * İşi bitince release() ile geri verilmeli.
+ * lang: oyuncunun dili; rakip çoğunlukla aynı dilden gelir. İşi bitince releasePersona() ile geri verilmeli.
  */
-export function acquirePersona(target: number, avoid = ''): Persona {
+export function acquirePersona(target: number, avoid = '', lang?: Lang): Persona {
   const t = Math.max(0, Math.min(1, target));
-  const bad = avoid.toLocaleLowerCase('tr');
+  const bad = avoid.toLowerCase();
+  const region = lang && Math.random() < LOCAL_SHARE ? lang : undefined;
   for (let w = 0.06; ; w *= 1.6) {
-    const c = PERSONAS.filter((p) => !inUse.has(p.id) && Math.abs(p.skill - t) <= w && p.name.toLocaleLowerCase('tr') !== bad);
+    const c = PERSONAS.filter(
+      (p) => !inUse.has(p.id) && (!region || p.region === region) && Math.abs(p.skill - t) <= w && p.name.toLowerCase() !== bad,
+    );
     if (c.length || w > 2) {
-      const p = c.length ? c[Math.floor(Math.random() * c.length)] : PERSONAS[Math.floor(Math.random() * PERSONAS.length)];
+      const free = PERSONAS.filter((p) => !inUse.has(p.id));
+      const p = c.length ? c[Math.floor(Math.random() * c.length)] : free[Math.floor(Math.random() * free.length)] ?? PERSONAS[0];
       inUse.add(p.id);
       return p;
     }

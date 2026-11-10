@@ -4,7 +4,7 @@ import * as B from '../shared/balance';
 import type { BotLevel, GameMode, JoinOptions } from '../shared/protocol';
 import { BattleState, Player } from './state';
 import { Simulation } from './sim';
-import { botName } from '../shared/i18n';
+import { botName, isLang, type Lang } from '../shared/i18n';
 import { Bot } from './bot';
 import { Tutorial } from './tutorial';
 import { acquirePersona, releasePersona, type Persona } from './personas';
@@ -52,6 +52,7 @@ export class BattleRoom extends Room<{ state: BattleState }> {
   private fillTimer?: Delayed;
   private fillSince = 0;
   private fillSkill = FILL_DEFAULT_SKILL;
+  private fillLang?: Lang;
   private persona?: Persona;
 
   onCreate(options: JoinOptions) {
@@ -158,6 +159,7 @@ export class BattleRoom extends Room<{ state: BattleState }> {
     } else if (this.state.mode === 'quick' && FILL_ON) {
       const sk = Number(options?.skill);
       this.fillSkill = options?.skill !== undefined && Number.isFinite(sk) ? Math.max(0, Math.min(1, sk)) : FILL_DEFAULT_SKILL;
+      this.fillLang = isLang(options?.lang) ? options.lang : undefined;
       this.scheduleFill(FILL_MIN_S + (FILL_MAX_S - FILL_MIN_S) * Math.random() ** 1.5);
     }
   }
@@ -185,7 +187,7 @@ export class BattleRoom extends Room<{ state: BattleState }> {
     }
     let human: Player | undefined;
     this.state.players.forEach((p) => (human = p));
-    const persona = acquirePersona(this.fillSkill, human?.name);
+    const persona = acquirePersona(this.fillSkill, human?.name, this.fillLang);
     this.persona = persona;
     // id gerçek bir oturum kimliği gibi; isBot istemciye false gider
     const botPlayer = this.sim.addPlayer(generateId(), persona.name, true, '', false);
@@ -195,7 +197,7 @@ export class BattleRoom extends Room<{ state: BattleState }> {
     this.sim.startMatch();
     const waited = Math.round((Date.now() - this.fillSince) / 1000);
     console.log(
-      `[eşleşme ${this.roomId}] ${waited} sn sonra yapay zeka rakip: ${persona.name} (#${persona.id}) — oyuncu gücü ${this.fillSkill.toFixed(2)}, rakip ${bot.skill.toFixed(2)}`,
+      `[eşleşme ${this.roomId}] ${waited} sn sonra yapay zeka rakip: ${persona.name} (#${persona.id}, ${persona.region}) — oyuncu ${this.fillLang ?? '?'}, gücü ${this.fillSkill.toFixed(2)}, rakip ${bot.skill.toFixed(2)}`,
     );
   }
 

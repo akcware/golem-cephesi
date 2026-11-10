@@ -35,6 +35,8 @@ export interface JoinOptions {
   level?: BotLevel;
   /** Hızlı eşleşme: oyuncunun cihazında tutulan güç tahmini (0 acemi … 1 usta). Kimse bulunamazsa rakip buna göre seçilir. */
   skill?: number;
+  /** Hızlı eşleşme: oyuncunun arayüz dili (en, tr, de, es, fr, pt). Kimse bulunamazsa rakip çoğunlukla bu dilden bir oyuncu gibi gelir. */
+  lang?: string;
 }
 
 /** Sunucu → istemci görsel efekt olayları ('fx' mesajı) */

@@ -61,7 +61,7 @@ function M.join(opts, cb)
 	if opts.mode == "bot" then
 		c:create("battle", { mode = "bot", name = name, level = opts.level or "normal" }, done)
 	elseif opts.mode == "quick" then
-		c:join_or_create("battle", { mode = "quick", name = name, skill = opts.skill }, done)
+		c:join_or_create("battle", { mode = "quick", name = name, skill = opts.skill, lang = I.get_lang() }, done)
 	elseif opts.mode == "tutorial" then
 		c:create("battle", { mode = "tutorial", name = name }, done)
 	elseif opts.mode == "private" then
