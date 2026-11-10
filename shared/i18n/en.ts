@@ -344,7 +344,6 @@ export const en = {
   'screen.cancel': 'Cancel',
   'screen.lanHint': 'If you are on the same Wi-Fi, your friend should open the game using this computer’s local IP address.',
   'screen.searching': 'Looking for an opponent…',
-  'screen.searchingText': 'The match starts when another player joins Quick Match.',
   'screen.pausedTitle': 'Your opponent disconnected',
   'screen.pausedText': 'Waiting up to {n} s…',
   'screen.tutWon': 'TUTORIAL COMPLETE!',

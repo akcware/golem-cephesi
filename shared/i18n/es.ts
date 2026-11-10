@@ -342,7 +342,6 @@ export const es: Record<keyof typeof en, string> = {
   'screen.cancel': 'Cancelar',
   'screen.lanHint': 'Si los dos están en la misma red Wi-Fi, tu amigo debe abrir el juego con la dirección IP local de este equipo.',
   'screen.searching': 'Buscando rival…',
-  'screen.searchingText': 'La partida empieza cuando otro jugador entre en Partida rápida.',
   'screen.pausedTitle': 'Tu rival se desconectó',
   'screen.pausedText': 'Esperando hasta {n} s…',
   'screen.tutWon': '¡TUTORIAL COMPLETADO!',

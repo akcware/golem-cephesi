@@ -113,8 +113,39 @@ npm run mobile:assets
 
 - **Eğitim:** Yeni oyuncu için 15 adımlı rehberli maç (3-4 dk): golem üretme, güç üçgeni, savun/hücum, noktalar, karakol, kule, kademe, çağ kartı, komutan, özel güç ve son saldırı. Rakip tarafı senaryolu bir eğitmen oynar; oyuncunun kalesi düşmez. İlk açılışta menüde öne çıkar, bitince "Eğitimi tekrar oyna" olarak kalır.
 - **Bota karşı:** Kolay / Normal / Zor. Bot hile yapmaz, insanla aynı komutları kullanır.
-- **Hızlı eşleşme:** Bekleyen başka bir oyuncuyla eşleşir.
+- **Hızlı eşleşme:** Bekleyen başka bir oyuncuyla eşleşir. 5–18 sn içinde kimse gelmezse yapay zeka bir rakip girer (aşağıya bak).
 - **Oda kur:** 4 harfli kod ve davet linki (`?oda=ABCD`) üretir.
+
+## Hızlı eşleşmede yapay zeka rakip
+
+Oyuncu sayısı azken hızlı eşleşmede kimse beklemesin diye:
+
+- **Önce gerçek oyuncu:** İlk oyuncu girince rastgele 5–18 sn gerçek bir rakip beklenir. Bu sürede biri gelirse ikisi eşleşir; tam o anda bağlanan biri varsa onu bekler.
+- **Kişilik havuzu (`server/personas.ts`):** 360 kişilik, tohumlu üretildiği için sunucu yeniden başlasa da aynı. Her birinin oyuncu adına benzeyen bir takma adı (`server/names.ts`), gücü (0 acemi … 1 usta) ve tarzı var (saldırgan/temkinli, kuleci, ağır golem sever, rövanşa yatkın, ezilince bırakan). Aynı kişilik aynı anda iki maçta olmaz.
+- **İstemci ayırt edemez:** Oyuncu kimliği gerçek oturum kimliği gibidir; istemciye `isBot=false` gider (yapay zeka olduğu yalnızca sunucudaki `Player.ai` alanında).
+- **İnsan gibi oynar (`server/bot.ts`):** Gücüne göre kolay ↔ zor bot ayarları arasında kayar, tarzı üstüne biner. Dikkati dalgalanır (bir süre oynar, birkaç saniye oyalanır, ara sıra uzun ara verir); oyalanırken kalesine düşman gelirse tepki süresi sonunda fark eder. Maç başında biraz bekler, çağ kartını okumak ve kademe atlamak zaman alır, acemiler toplanmadan hücum eder, kartı rastgele seçer, özel gücü boşa harcar. Bazı kişilikler ezilince oyunu bırakır. Maç sonunda birkaç saniye düşünüp rövanşı kabul eder ya da odadan çıkar.
+- **Güç ölçeği** (`tools/persona-check.ts`, 40'ar maç; kişiliğin kazanma oranı):
+
+| Güç | Kolay bota | Normal bota | Zor bota |
+|---|---|---|---|
+| 0.1 | %30 | %3 | %0 |
+| 0.3 | %58 | %10 | %3 |
+| 0.5 | %65 | %28 | %18 |
+| 0.7 | %85 | %43 | %45 |
+| 0.9 | %90 | %40 | %45 |
+
+  Beceriler (toplanıp hücum, karakol, kart seçimi…) her kişilikte biraz farklı güçte açılır; eğri bu yüzden basamaksız. Maçların ~%8'i rakibin oyunu bırakmasıyla biter.
+- **Güce göre rakip:** İstemci cihazda bir güç tahmini tutar (eğitimi bitirmemişse 0.1, bitirmişse 0.25 ile başlar; hızlı eşleşmede kazanınca +0.06, kaybedince −0.08, ilk 8 maçta iki kat). Tahmin, oyuncunun maçların ~%57'sini kazandığı düzeye oturur. Sunucu bu güce en yakın boştaki kişiliği seçer.
+- **Ölçüm:** Her dolgu sunucu günlüğüne yazılır (`[eşleşme ODA] 12 sn sonra yapay zeka rakip: kartal1907 (#41) — oyuncu gücü 0.31, rakip 0.33`). Böylece ne sıklıkta olduğu görülür; oyuncu sayısı artınca kapatılabilir.
+- **Ayarlar:** `BOT_FILL=off` dolguyu kapatır, `BOT_FILL_WAIT=5-18` bekleme aralığını (sn) değiştirir.
+
+```bash
+npx tsx tools/quick-fill-check.ts
+```
+
+```bash
+npx tsx tools/persona-check.ts 40 easy normal hard
+```
 
 ## Yapı
 
@@ -123,7 +154,9 @@ shared/balance.ts   Tüm denge değerleri (birimler, kademeler, ekonomi) — den
 shared/protocol.ts  İstemci ↔ sunucu mesajları
 shared/tutorial.ts  Eğitim adımları ve ipuçları (web ve mobil ortak)
 server/sim.ts       Oyun kuralları (sunucu-otoriter simülasyon, 20 Hz)
-server/bot.ts       Yapay zeka
+server/bot.ts       Yapay zeka (açık bot modu ve hızlı eşleşme rakibinin insan gibi davranışı)
+server/personas.ts  Hızlı eşleşme rakiplerinin kişilik havuzu
+server/names.ts     Oyuncu adına benzeyen takma ad üretici
 server/tutorial.ts  Eğitim maçının yönetmeni (rakip tarafı senaryoyla oynar)
 server/BattleRoom.ts Colyseus odası: bağlantılar, komutlar, rövanş, yeniden bağlanma
 client/textures.ts  Tüm grafikler kodla çiziliyor (görsel dosyası yok)
@@ -134,6 +167,8 @@ tools/rusher.ts     Botu sınamak için oyuncu taklitleri (saldırgan, planlı, 
 tools/old-bot.ts    Botun güçlendirilmeden önceki sürümü (karşılaştırma için)
 tools/feature-check.ts Çağ kartı, komutan ve Eter Kaynağı kurallarının testleri
 tools/tutorial-check.ts Eğitim maçını sanal oyuncularla baştan sona oynatan test
+tools/quick-fill-check.ts Hızlı eşleşme dolgusunu gerçek sunucu ve istemciyle dener
+tools/persona-check.ts Kişiliklerin gücünü güç düzeyine göre ölçer
 tools/bake-mobile.ts Çizimleri mobil sürüm için PNG'ye döker (aynı çizim kodu)
 tools/bake-sounds.ts Ses tariflerini (client/sounds.ts) mobil sürüm için WAV'a döker
 client/tracks.ts    Müzik parçaları, seviyeleri ve künyeleri (dosyalar public/music/)

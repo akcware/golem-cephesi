@@ -7,6 +7,7 @@ import type { Arch } from '../shared/balance';
 import type { BotLevel } from '../shared/protocol';
 import type { Simulation } from './sim';
 import type { Player, Unit } from './state';
+import type { Persona } from './personas';
 
 interface BotConfig {
   think: number; // karar aralığı (sn)
@@ -26,12 +27,15 @@ interface BotConfig {
   specialNeed: number; // özel güç için alandaki en az düşman
   cmdNeed: number; // komutan darbesi için önündeki en az düşman
   openSpecial: boolean; // hücuma geçerken özel güçle açar
+  huntCmd: boolean; // rakip komutanı tek başına da olsa darbeyle hedefler
+  smartCards: boolean; // çağ kartını tercih sırasına göre seçer (değilse rastgele)
+  turretReserve: number; // kale kulesi alırken elde bırakacağı para (yakın dövüşçü sayısı)
 }
 
 const CFG: Record<BotLevel, BotConfig> = {
-  easy: { think: 1.2, counter: 0.2, queue: 1, attackRatio: 0, defenseWeight: 0, maxTurrets: 1, maxGrade: 1, armOutposts: false, heavyShare: 0.1, retreatRatio: 0, opening: 0, opFirst: false, opReserve: 4, saveStop: false, specialNeed: 6, cmdNeed: 4, openSpecial: false },
-  normal: { think: 0.9, counter: 0.45, queue: 2, attackRatio: 1.3, defenseWeight: 0.3, maxTurrets: 2, maxGrade: 2, armOutposts: false, heavyShare: 0.25, retreatRatio: 0.7, opening: 40, opFirst: true, opReserve: 1, saveStop: true, specialNeed: 5, cmdNeed: 3, openSpecial: false },
-  hard: { think: 0.6, counter: 0.65, queue: 2, attackRatio: 1.3, defenseWeight: 0.3, maxTurrets: 2, maxGrade: 2, armOutposts: true, heavyShare: 0.25, retreatRatio: 0.7, opening: 40, opFirst: true, opReserve: 1, saveStop: true, specialNeed: 5, cmdNeed: 3, openSpecial: false },
+  easy: { think: 1.2, counter: 0.2, queue: 1, attackRatio: 0, defenseWeight: 0, maxTurrets: 1, maxGrade: 1, armOutposts: false, heavyShare: 0.1, retreatRatio: 0, opening: 0, opFirst: false, opReserve: 4, saveStop: false, specialNeed: 6, cmdNeed: 4, openSpecial: false, huntCmd: false, smartCards: false, turretReserve: 3 },
+  normal: { think: 0.9, counter: 0.45, queue: 2, attackRatio: 1.3, defenseWeight: 0.3, maxTurrets: 2, maxGrade: 2, armOutposts: false, heavyShare: 0.25, retreatRatio: 0.7, opening: 40, opFirst: true, opReserve: 1, saveStop: true, specialNeed: 5, cmdNeed: 3, openSpecial: false, huntCmd: true, smartCards: true, turretReserve: 1 },
+  hard: { think: 0.6, counter: 0.65, queue: 2, attackRatio: 1.3, defenseWeight: 0.3, maxTurrets: 2, maxGrade: 2, armOutposts: true, heavyShare: 0.25, retreatRatio: 0.7, opening: 40, opFirst: true, opReserve: 1, saveStop: true, specialNeed: 5, cmdNeed: 3, openSpecial: false, huntCmd: true, smartCards: true, turretReserve: 1 },
 };
 
 /** Normal/zor botun çağ kartı tercih sırası (baştaki daha çok tercih edilir). */
@@ -44,25 +48,147 @@ function armyValue(units: Unit[]): number {
   return v;
 }
 
+const rand = (a: number, b: number) => a + (b - a) * Math.random();
+const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+
+/**
+ * Kişiliğin o maçtaki oyun ayarı: güç (s) kolay → normal → zor ayarları arasında kayar, tarz (saldırgan,
+ * kuleci, ağır golem sever) üstüne biner. Acemiler toplanmadan hep hücum eder ve özel gücü boşa harcar.
+ */
+export function personaConfig(pe: Persona, s: number): BotConfig {
+  const L = (a: number, b: number) => a + (b - a) * s;
+  // Becerilerin açıldığı güç eşikleri kişiden kişiye ±0.1 kayar: herkes aynı anda "toplanmayı",
+  // "karakol kurmayı" öğrenmez. Böylece havuzun gücü basamaklı değil, yumuşak artar.
+  const at = (t: number, k: number) => {
+    const h = Math.sin(pe.id * 12.9898 + k * 78.233) * 43758.5453;
+    return s >= t + (h - Math.floor(h) - 0.5) * 0.2;
+  };
+  // acemiler toplanmayı bilmez: hep hücum (kolay bot gibi); saldırgan tarzlılar biraz daha uzun süre böyle oynar
+  const rushNoob = !at(0.25, 1) || (!at(0.4, 1) && pe.aggro > 0.6);
+  const attackRatio = rushNoob ? 0 : 1.3 + (0.5 - pe.aggro) * 0.4;
+  return {
+    think: L(1.3, 0.6) * (1.15 - 0.3 * pe.pace),
+    counter: L(0.15, 0.75),
+    queue: at(0.3, 2) ? 2 : 1,
+    attackRatio,
+    defenseWeight: rushNoob ? 0 : L(0.1, 0.4),
+    maxTurrets: !at(0.25, 3) ? 1 : Math.max(1, Math.min(at(0.45, 3) ? 3 : 2, Math.round(1 + 2 * pe.builder * Math.min(1, s + 0.3)))),
+    maxGrade: at(0.25, 4) ? 2 : 1,
+    armOutposts: at(0.7, 5) || (at(0.45, 5) && pe.builder > 0.45),
+    // ağır golemin değerini acemiler bilmez (ağır payı orduyu belirgin güçlendiriyor)
+    heavyShare: 0.1 + 0.25 * pe.heavy * Math.min(1, s * 2),
+    retreatRatio: attackRatio === 0 ? 0 : L(0.5, 0.75),
+    opening: at(0.2, 6) ? 15 + 35 * pe.aggro : 0,
+    opFirst: at(0.3, 7) || pe.builder > 0.65,
+    opReserve: at(0.3, 8) ? 1 : 3,
+    saveStop: at(0.4, 9),
+    // acemiler özel gücü ve komutan darbesini az kullanır (büyük kalabalık bekler, çoğu zaman unutur)
+    specialNeed: Math.round(L(6.4, 5)),
+    cmdNeed: Math.round(L(4.4, 3)),
+    openSpecial: at(0.55, 10) && pe.aggro > 0.5,
+    huntCmd: at(0.35, 11),
+    smartCards: at(0.3, 12),
+    turretReserve: at(0.3, 13) ? 1 : 3,
+  };
+}
+
+/** İnsan gibi oynamanın kusurları: dikkat dalgalanır, tepki gecikir, kart okumak ve çağ atlamak zaman alır. */
+interface Human {
+  /** Maç başında ilk hamleye kadar geçen süre (sn) */
+  startIdle: () => number;
+  /** Aralıksız oynadığı süre ve arada oyalandığı süre (sn) */
+  focus: [number, number];
+  idle: [number, number];
+  /** Oyalanırken kalesine düşman yaklaşınca fark etme süresi (sn) */
+  reaction: number;
+  /** Bir oyalanmanın uzun bir ara ("telefona bakma") olma olasılığı */
+  afkChance: number;
+  /** XP dolduktan sonra çağ atlamaya kadar geçen süre (sn) */
+  evolveDelay: [number, number];
+  /** Kart seçerken düşünmeden rastgele seçme olasılığı */
+  cardMistake: number;
+  /** Ezilirken oyunu bırakma olasılığı */
+  quit: number;
+}
+
+function humanTraits(pe: Persona, s: number): Human {
+  const L = (a: number, b: number) => a + (b - a) * s;
+  const slow = 1 - pe.pace;
+  return {
+    startIdle: () => rand(1.5, 4) + slow * rand(0, 4) + (Math.random() < 0.1 ? rand(4, 9) : 0),
+    focus: [L(6, 15), L(14, 35)],
+    idle: [L(1.5, 0.5) + slow, L(5, 1.5) + 2 * slow],
+    reaction: L(2, 0.5) * (0.8 + 0.4 * slow),
+    afkChance: 0.04 + 0.08 * (1 - s),
+    evolveDelay: [L(2, 0.5), L(12, 3)],
+    cardMistake: 0.35 * (1 - s),
+    quit: 0.45 * pe.tilt,
+  };
+}
+
 export class Bot {
   private timer = 1;
   private cfg: BotConfig;
+  /** Hızlı eşleşmede gerçek oyuncu gibi davranan rakibin kişiliği (açık bot modunda yok). */
+  private persona?: Persona;
+  private lastPhase = '';
+  /** Bu odada oynanan rövanş sayısı (her rövanşta tekrar kabul etme isteği azalır). */
+  private rematches = 0;
+  /** Maç sonu: rövanş kararına kalan süre / rövanşı kabul ettikten sonra rakibi bekleme sabrı. */
+  private decideT = 0;
+  private patience = 0;
+  /** Çağ kartını seçeceği an (kartları okumak zaman alır); -1: sunulan kart yok. */
+  private cardAt = -1;
+  /** Bu maçtaki gücü (kişiliğin gücü ± o günkü form) */
+  readonly skill: number = 0.5;
+  private h?: Human;
+  // dikkat döngüsü
+  private away = false;
+  private afk = false;
+  private attT = 0;
+  private noticeT = -1;
+  private evolveAt = -1;
+  private quitRolled = false;
+  private quitAt = -1;
 
+  /** level: açık bot modu seviyesi ya da hızlı eşleşme kişiliği. skill verilirse kişiliğin gücü yerine o kullanılır. */
   constructor(
     private sim: Simulation,
     private p: Player,
-    private level: BotLevel = 'normal',
+    level: BotLevel | Persona = 'normal',
+    skill?: number,
   ) {
-    this.cfg = CFG[level];
+    if (typeof level === 'string') {
+      this.cfg = CFG[level];
+    } else {
+      this.persona = level;
+      this.skill = clamp01(skill ?? level.skill + rand(-0.06, 0.06));
+      this.cfg = personaConfig(level, this.skill);
+      this.h = humanTraits(level, this.skill);
+    }
   }
 
   update(dt: number) {
     const phase = this.sim.state.phase;
+    if (phase !== this.lastPhase) {
+      if (phase === 'countdown' && this.lastPhase === 'ended') this.rematches++;
+      this.lastPhase = phase;
+      if (phase === 'ended') this.decideT = rand(2, 9);
+      if (phase === 'countdown') this.resetMatch();
+      this.cardAt = -1;
+    }
     if (phase === 'ended') {
-      this.p.wantsRematch = true;
+      if (this.persona) this.afterMatch(dt);
+      else this.p.wantsRematch = true; // açık bot modu: hep hazır
       return;
     }
     if (!this.sim.playing()) return;
+    if (this.quitAt >= 0 && this.sim.state.time >= this.quitAt) {
+      this.leave();
+      this.sim.endGame(1 - this.p.side, 'forfeit');
+      return;
+    }
+    if (this.h && !this.attentive(dt)) return;
     this.timer -= dt;
     if (this.timer > 0) return;
     this.timer = this.cfg.think * (0.7 + Math.random() * 0.6);
@@ -75,8 +201,21 @@ export class Bot {
     const myBase = B.baseFrontX(p.side);
     const distToBase = (u: Unit) => (u.x - myBase) * dir;
 
-    sim.evolve(p);
-    if (p.picks > 0) this.pickCard();
+    const next = B.TIERS[p.tier + 1];
+    if (!this.h) sim.evolve(p);
+    else if (next && p.xpF >= next.xpToReach) {
+      // XP doldu: fark edip düğmeye basması biraz sürer
+      if (this.evolveAt < 0) this.evolveAt = sim.state.time + rand(...this.h.evolveDelay);
+      else if (sim.state.time >= this.evolveAt && sim.evolve(p)) this.evolveAt = -1;
+    }
+    if (p.picks > 0) {
+      if (!this.persona) this.pickCard();
+      else if (this.cardAt < 0) this.cardAt = sim.state.time + rand(2, 7);
+      else if (sim.state.time >= this.cardAt) {
+        this.cardAt = -1;
+        this.pickCard();
+      }
+    }
 
     const own: Unit[] = [];
     const enemies: Unit[] = [];
@@ -108,6 +247,12 @@ export class Bot {
     // 1) Duruş: ordu üstünse dalga halinde saldır, ezilmeye başlarsa kulelerin dibine çekil
     const myVal = armyValue(own);
     const enVal = armyValue(enemies);
+
+    // Kalesi düşmek üzere ve ordusu ezilmişse: bazı oyuncular oyunu bırakır (bir kez karar verir)
+    if (this.h && !this.quitRolled && p.baseHp < p.baseMaxHp * 0.3 && near >= 3 && myVal < enVal * 0.35) {
+      this.quitRolled = true;
+      if (Math.random() < this.h.quit) this.quitAt = sim.state.time + rand(1.5, 5);
+    }
     if (cfg.attackRatio === 0 || sim.state.time < cfg.opening) {
       sim.setStance(p, 'attack');
     } else {
@@ -136,7 +281,7 @@ export class Bot {
         return d > -20 && d < B.CMD_LEAP + B.CMD_SLAM_R;
       });
       const need = cfg.cmdNeed;
-      const worth = ahead.length >= need || (this.level !== 'easy' && ahead.some((e) => e.cmd));
+      const worth = ahead.length >= need || (cfg.huntCmd && ahead.some((e) => e.cmd));
       if (worth) sim.cmdSkill(p);
     }
 
@@ -212,7 +357,7 @@ export class Bot {
     }
 
     // 5) Kale kuleleri: çağ ilerledikçe daha çok kule; eskiyenleri yenile, para artarsa dereceyi yükselt.
-    const turretReserve = this.level === 'easy' ? unitCost * 3 : unitCost;
+    const turretReserve = unitCost * cfg.turretReserve;
     if (!saving) {
       if (empty >= 0 && built < want && mine >= 3) {
         const g = bestGrade(p.gold - turretReserve);
@@ -242,6 +387,88 @@ export class Bot {
     }
   }
 
+  /**
+   * Maç sonu (yalnızca hızlı eşleşme rakibi): birkaç saniye düşünür, rövanşı kabul eder ya da odadan ayrılır.
+   * Kaybeden rövanşa daha isteklidir; rakip rövanş isterse daha çabuk karar verir; kabul edip uzun süre
+   * yanıt alamazsa çıkar.
+   */
+  private afterMatch(dt: number) {
+    const p = this.p;
+    if (p.left || !this.persona) return;
+    const foe = this.sim.player(1 - p.side);
+    if (!p.wantsRematch) {
+      if (foe?.wantsRematch && this.decideT > 3) this.decideT = rand(1, 3);
+      this.decideT -= dt;
+      if (this.decideT > 0) return;
+      const lost = this.sim.state.winner !== p.side;
+      const chance = 0.25 + 0.5 * this.persona.social + (lost ? 0.15 : 0) + (foe?.wantsRematch ? 0.1 : 0) - 0.15 * this.rematches;
+      if (Math.random() < Math.max(0.05, Math.min(0.9, chance))) {
+        p.wantsRematch = true;
+        this.patience = rand(15, 40);
+      } else this.leave();
+    } else if (!foe?.wantsRematch) {
+      this.patience -= dt;
+      if (this.patience <= 0) this.leave();
+    }
+  }
+
+  /** Yeni maç (ilk maç ya da rövanş): dikkat döngüsü ve maç içi kararlar baştan. */
+  private resetMatch() {
+    this.away = true; // maç başında biraz oyalanır (kartlara, haritaya bakar)
+    this.afk = false;
+    this.attT = this.h ? this.h.startIdle() : 0;
+    this.noticeT = -1;
+    this.evolveAt = -1;
+    this.quitRolled = false;
+    this.quitAt = -1;
+  }
+
+  /**
+   * Dikkat döngüsü: bir süre aralıksız oynar, sonra birkaç saniye oyalanır (ara sıra uzun bir ara).
+   * Oyalanırken kalesine düşman yaklaşırsa tepki süresi sonunda oyuna döner. false: şimdilik bir şey yapmaz.
+   */
+  private attentive(dt: number): boolean {
+    const h = this.h!;
+    this.attT -= dt;
+    if (!this.away) {
+      if (this.attT > 0) return true;
+      this.away = true;
+      this.afk = Math.random() < h.afkChance;
+      this.attT = this.afk ? rand(6, 14) : rand(...h.idle);
+      this.noticeT = -1;
+      return false;
+    }
+    if (this.noticeT < 0 && this.threat()) this.noticeT = h.reaction * (this.afk ? 2.5 : 1) * rand(0.7, 1.3);
+    if (this.noticeT >= 0) {
+      this.noticeT -= dt;
+      if (this.noticeT <= 0) this.attT = 0;
+    }
+    if (this.attT > 0) return false;
+    this.away = false;
+    this.attT = rand(...h.focus);
+    this.timer = Math.min(this.timer, rand(0.1, 0.4)); // döner dönmez bir şey yapar
+    return true;
+  }
+
+  /** Kalesine düşman yaklaşıyor mu? */
+  private threat(): boolean {
+    const dir = B.dirOf(this.p.side);
+    const base = B.baseFrontX(this.p.side);
+    let near = false;
+    this.sim.state.units.forEach((u) => {
+      if (u.side !== this.p.side && (u.x - base) * dir < 550) near = true;
+    });
+    return near;
+  }
+
+  /** Gerçek bir oyuncunun odadan çıkması gibi (istemci "Rakip ayrıldı" gösterir). */
+  private leave() {
+    const p = this.p;
+    p.wantsRematch = false;
+    p.left = true;
+    p.connected = false;
+  }
+
   /** Çağ kartı seçimi: kolay bot rastgele, diğerleri tercih sırasına göre. */
   private pickCard() {
     const { p, sim } = this;
@@ -249,7 +476,7 @@ export class Bot {
     p.offer.forEach((id) => offer.push(id));
     if (!offer.length) return;
     let id = offer[Math.floor(Math.random() * offer.length)];
-    if (this.level !== 'easy') {
+    if (this.cfg.smartCards && !(this.h && Math.random() < this.h.cardMistake)) {
       let best = Infinity;
       for (const o of offer) {
         const r = CARD_PREF.indexOf(o);

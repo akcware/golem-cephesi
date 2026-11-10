@@ -33,6 +33,8 @@ export interface JoinOptions {
   mode: GameMode;
   name?: string;
   level?: BotLevel;
+  /** Hızlı eşleşme: oyuncunun cihazında tutulan güç tahmini (0 acemi … 1 usta). Kimse bulunamazsa rakip buna göre seçilir. */
+  skill?: number;
 }
 
 /** Sunucu → istemci görsel efekt olayları ('fx' mesajı) */

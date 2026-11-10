@@ -316,6 +316,9 @@ local function build_confirm(self)
 	ui.text(VW / 2, VH / 2 + 40, I.t("hud.leaveConfirm"), { size = 20, parent = g, width = 480 })
 	ui.button("conf_yes", VW / 2 - 110, VH / 2 - 50, 200, 56, function()
 		self.confirm = false
+		-- hızlı eşleşmede maç ortasında çıkmak yenilgi sayılır (sunucu da öyle sayar)
+		local st = net.state()
+		if st and st.mode == "quick" then self:record_quick(false) end
 		msg.post(GAME, "leave")
 	end, { parent = g, modal = "confirm", label = I.t("mobile.leave"), size = 22, color = U.rgb(0x8a2f2f) })
 	ui.button("conf_no", VW / 2 + 110, VH / 2 - 50, 200, 56, function() self.confirm = false end, { parent = g, modal = "confirm", label = I.t("screen.cancel"), size = 22 })
@@ -380,7 +383,22 @@ end
 local Ui = {}
 
 function Ui.save(self)
-	sys.save(SAVE, { name = self.name, level = self.level, tut_done = self.tut_done, tips = self.tips_seen, muted = self.muted, music_off = self.music_off, lang = self.lang })
+	sys.save(SAVE, { name = self.name, level = self.level, tut_done = self.tut_done, tips = self.tips_seen, muted = self.muted, music_off = self.music_off, lang = self.lang, skill = self.skill, quick_n = self.quick_n })
+end
+
+-- Hızlı eşleşme gücü tahmini (0 acemi … 1 usta): kazandıkça artar, kaybettikçe azalır. Sunucu, kimse
+-- bulunamayınca rakibi buna göre seçer. Web'deki onboarding.ts quickSkill/recordQuick ile aynı kurallar.
+function Ui.quick_skill(self)
+	if self.skill then return self.skill end
+	return self.tut_done and 0.25 or 0.1
+end
+
+function Ui.record_quick(self, won)
+	local k = (self.quick_n or 0) < 8 and 2 or 1
+	local v = self:quick_skill() + (won and 0.06 or -0.08) * k
+	self.skill = math.max(0, math.min(1, v))
+	self.quick_n = (self.quick_n or 0) + 1
+	self:save()
 end
 
 function Ui.toggle_mute(self)
@@ -505,6 +523,7 @@ function Ui.join(self, opts)
 	self.busy = true
 	self:refresh_menu()
 	opts.name = self.name
+	if opts.mode == "quick" then opts.skill = self:quick_skill() end
 	msg.post(GAME, "join", opts)
 end
 
@@ -717,6 +736,7 @@ local function update_overlay(self, st, me, foe)
 		if phase == "ended" and self.last_phase then
 			-- müzik açıksa zafer/yenilgi motifi çalar, değilse kısa efekt sesi
 			local win = st.winner == net.side
+			if st.mode == "quick" then self:record_quick(win) end
 			if not music.ended(win) then sfx.play(win and "win" or "lose") end
 		end
 		if phase == "waiting" then
@@ -746,8 +766,7 @@ local function update_overlay(self, st, me, foe)
 			ui.text(cx, cy + 66, I.t("screen.waitCode"), { size = 16, parent = g, color = C.dim, font = "small" })
 			ui.text(cx, cy + 6, st.code, { size = 64, font = "big", parent = g, color = C.gold })
 		else
-			ui.text(cx, cy + 80, I.t("screen.searching"), { size = 28, parent = g, fit = 520 })
-			ui.text(cx, cy + 20, I.t("screen.searchingText"), { size = 16, parent = g, color = C.dim, font = "small", width = 500 })
+			ui.text(cx, cy + 30, I.t("screen.searching"), { size = 28, parent = g, fit = 520 })
 		end
 		ui.button("ov_cancel", cx, cy - 96, 220, 56, function() msg.post(GAME, "leave") end, { parent = g, modal = "overlay", label = I.t("screen.cancel"), size = 22 })
 	elseif phase == "countdown" then
@@ -1240,6 +1259,8 @@ function init(self)
 	I.set_lang(self.lang)
 	self.name = saved.name or (I.t("player.default") .. math.random(100, 999))
 	self.tut_done = saved.tut_done == true
+	self.skill = tonumber(saved.skill)
+	self.quick_n = tonumber(saved.quick_n) or 0
 	self.muted = saved.muted == true
 	sfx.muted = self.muted
 	self.music_off = saved.music_off == true

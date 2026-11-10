@@ -342,7 +342,6 @@ export const de: Record<keyof typeof en, string> = {
   'screen.cancel': 'Abbrechen',
   'screen.lanHint': 'Wenn ihr im selben WLAN seid, sollte dein Freund das Spiel über die lokale IP-Adresse dieses Computers öffnen.',
   'screen.searching': 'Suche nach einem Gegner…',
-  'screen.searchingText': 'Das Match beginnt, sobald ein anderer Spieler dem Schnellspiel beitritt.',
   'screen.pausedTitle': 'Dein Gegner hat die Verbindung verloren',
   'screen.pausedText': 'Warte bis zu {n} s…',
   'screen.tutWon': 'TUTORIAL GESCHAFFT!',

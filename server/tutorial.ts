@@ -41,7 +41,7 @@ export class Tutorial {
   private me(): Player | undefined {
     let me: Player | undefined;
     this.sim.state.players.forEach((p) => {
-      if (!p.isBot) me = p;
+      if (!p.ai) me = p;
     });
     return me;
   }

@@ -11,7 +11,7 @@ import { music, musicButton } from '../music';
 import { TENSION_HP } from '../tracks';
 import { fitText, fmtNum, fmtTime, h, setClass, setText, toast } from './dom';
 import { TUTORIAL, TUT_REVEAL, tipDef, tutIndex, type TutTarget } from '../../shared/tutorial';
-import { markTip, pendingTip, setTutorialDone } from './onboarding';
+import { markTip, pendingTip, recordQuick, setTutorialDone } from './onboarding';
 import {
   abilityDesc,
   abilityName,
@@ -1146,6 +1146,7 @@ export class Hud {
       if (phase === 'ended' && this.lastPhase) {
         // müzik açıksa zafer/yenilgi motifi çalar, değilse kısa efekt sesi
         const win = st.winner === this.side;
+        if (st.mode === 'quick') recordQuick(win);
         if (!music.ended(win)) {
           if (win) sfx.win();
           else sfx.lose();
@@ -1207,7 +1208,6 @@ export class Hud {
             { class: 'panel' },
             h('div', { class: 'spinner' }),
             h('h2', { text: t('screen.searching') }),
-            h('p', { text: t('screen.searchingText') }),
             h('button', { class: 'btn', text: t('screen.cancel'), onclick: () => this.onLeave() }),
           ),
         );

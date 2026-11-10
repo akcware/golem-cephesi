@@ -49,13 +49,17 @@ export class Simulation {
     return taken.has(0) ? 1 : 0;
   }
 
-  /** botKind: bot türü (ad istemcide bu türden çevrilir); insan oyuncuda verilmez. */
-  addPlayer(id: string, name: string, isBot: boolean, botKind = ''): Player {
+  /**
+   * ai: yapay zeka oynuyor. botKind: açık bot türü (ad istemcide bu türden çevrilir); insan oyuncuda ve
+   * hızlı eşleşme rakibinde boş. shown: istemciye bot olarak gösterilsin mi (hızlı eşleşme rakibinde hayır).
+   */
+  addPlayer(id: string, name: string, ai: boolean, botKind = '', shown = ai): Player {
     const p = new Player();
     p.id = id;
     p.name = name;
-    p.isBot = isBot;
-    p.botKind = botKind;
+    p.ai = ai;
+    p.isBot = ai && shown;
+    p.botKind = shown ? botKind : '';
     p.side = this.freeSide();
     this.resetPlayer(p);
     this.state.players.set(id, p);

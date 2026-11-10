@@ -10,6 +10,7 @@ import { Menu } from './ui/menu';
 import { Hud } from './ui/hud';
 import { toast } from './ui/dom';
 import { t } from '../shared/i18n';
+import { recordQuick } from './ui/onboarding';
 
 const CONSENTED = 4000;
 
@@ -98,6 +99,9 @@ export class App {
   private leave() {
     const room = this.room;
     if (!room) return;
+    // hızlı eşleşmede maç ortasında çıkmak yenilgi sayılır (sunucu da öyle sayar)
+    const st = room.state as { mode?: string; phase?: string } | undefined;
+    if (st?.mode === 'quick' && (st.phase === 'playing' || st.phase === 'countdown')) recordQuick(false);
     this.exit(CONSENTED);
     void room.leave();
   }

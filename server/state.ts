@@ -52,6 +52,8 @@ export class Player extends Schema {
   goldF = 0;
   xpF = 0;
   earnedF = 0;
+  /** Yapay zeka mı oynuyor? isBot istemciye gider; hızlı eşleşme rakibinde isBot=false, ai=true. */
+  ai = false;
 }
 
 export class Unit extends Schema {

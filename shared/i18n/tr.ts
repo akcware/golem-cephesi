@@ -342,7 +342,6 @@ export const tr: Record<keyof typeof en, string> = {
   'screen.cancel': 'Vazgeç',
   'screen.lanHint': 'Aynı Wi-Fi ağındaysanız, arkadaşın bu bilgisayarın yerel IP adresiyle oyunu açmalı.',
   'screen.searching': 'Rakip aranıyor…',
-  'screen.searchingText': "Başka bir oyuncu Hızlı Eşleşme'ye girince maç başlar.",
   'screen.pausedTitle': 'Rakibin bağlantısı koptu',
   'screen.pausedText': 'En fazla {n} sn bekleniyor…',
   'screen.tutWon': 'EĞİTİM TAMAM!',

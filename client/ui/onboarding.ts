@@ -25,6 +25,23 @@ export function setTutorialDone() {
   save('gf_tut_done', '1');
 }
 
+// Hızlı eşleşme gücü tahmini (0 acemi … 1 usta): kazandıkça artar, kaybettikçe azalır. Sunucu, kimse
+// bulunamayınca rakibi buna göre seçer. Kazanınca çıkış kaybedince inişten küçük: tahmin, oyuncunun
+// maçların yarısından biraz fazlasını (~%57) kazandığı düzeye oturur. İlk maçlarda adımlar iki kat.
+export function quickSkill(): number {
+  const raw = load('gf_skill');
+  const v = Number(raw);
+  if (raw !== null && Number.isFinite(v)) return v;
+  return tutorialDone() ? 0.25 : 0.1;
+}
+export function recordQuick(won: boolean) {
+  const games = Number(load('gf_quick_n')) || 0;
+  const k = games < 8 ? 2 : 1;
+  const v = Math.max(0, Math.min(1, quickSkill() + (won ? 0.06 : -0.08) * k));
+  save('gf_skill', v.toFixed(3));
+  save('gf_quick_n', String(games + 1));
+}
+
 let seen: Set<string> | undefined;
 function seenTips(): Set<string> {
   if (!seen) {
