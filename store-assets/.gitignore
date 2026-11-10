@@ -1,0 +1,9 @@
+# Büyük ikili dosyalar git'e girmez (yeniden üretilebilir ya da yerel girdi):
+# - screenshots/: render.mjs çıktısı
+# - source/assets/captures/: simülatörden ham oyun yakalamaları
+# - source/assets/art/: oyunun çizim kodundan üretilmiş büyük kesimler
+# - source/data.js: render.mjs'in aso/captions.json'dan ürettiği dosya
+screenshots/
+source/assets/captures/
+source/assets/art/
+source/data.js

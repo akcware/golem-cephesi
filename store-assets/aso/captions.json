@@ -1,0 +1,422 @@
+{
+  "en": {
+    "eras": [
+      "Wood",
+      "Bronze",
+      "Iron",
+      "Crystal",
+      "Aether"
+    ],
+    "fgTag": "March your golems. Crush their castle.",
+    "slides": [
+      {
+        "slot": "hero",
+        "eyebrow": "REAL-TIME STRATEGY",
+        "headline": "March your golems.\nCrush their castle.",
+        "emphasis": "Crush"
+      },
+      {
+        "slot": "army",
+        "eyebrow": "GOLEM ARMY",
+        "headline": "You build golems.\nThey fight.",
+        "emphasis": "fight"
+      },
+      {
+        "slot": "eras",
+        "eyebrow": "5 AGES",
+        "headline": "From Wood golems\nto Aether titans",
+        "emphasis": "titans"
+      },
+      {
+        "slot": "cards",
+        "eyebrow": "AGE CARDS",
+        "headline": "One card can\nturn the tide",
+        "emphasis": "tide"
+      },
+      {
+        "slot": "defense",
+        "eyebrow": "CASTLE DEFENSE",
+        "headline": "Build turrets.\nHold the line.",
+        "emphasis": "Hold"
+      },
+      {
+        "slot": "powers",
+        "eyebrow": "SPECIAL POWERS",
+        "headline": "Make it rain\npinecones",
+        "emphasis": "pinecones"
+      },
+      {
+        "slot": "online",
+        "eyebrow": "PHONE + BROWSER",
+        "headline": "Send a code.\nBeat your friend.",
+        "emphasis": "friend"
+      },
+      {
+        "slot": "closer",
+        "eyebrow": "GOLEM FORGE",
+        "headline": "Your golems\nare waiting",
+        "emphasis": "waiting",
+        "pills": [
+          "3 bot levels",
+          "Guided tutorial",
+          "Power triangle",
+          "15 age cards",
+          "3 outposts",
+          "Aether Well",
+          "Rematch",
+          "6 languages"
+        ]
+      }
+    ]
+  },
+  "tr": {
+    "eras": [
+      "Ahşap",
+      "Bronz",
+      "Demir",
+      "Kristal",
+      "Eter"
+    ],
+    "fgTag": "Golem ordunu sür, rakip kaleyi yık",
+    "slides": [
+      {
+        "slot": "hero",
+        "eyebrow": "ONLINE STRATEJİ",
+        "headline": "Golem ordunu sür,\nrakip kaleyi yık",
+        "emphasis": "yık"
+      },
+      {
+        "slot": "army",
+        "eyebrow": "GOLEM ORDUSU",
+        "headline": "Sen üret,\ngolemler savaşsın",
+        "emphasis": "savaşsın"
+      },
+      {
+        "slot": "eras",
+        "eyebrow": "5 ÇAĞ",
+        "headline": "Ahşap'tan Eter'e\nçağ atla",
+        "emphasis": "çağ"
+      },
+      {
+        "slot": "cards",
+        "eyebrow": "ÇAĞ KARTLARI",
+        "headline": "Doğru kart\nmaçı çevirir",
+        "emphasis": "çevirir"
+      },
+      {
+        "slot": "defense",
+        "eyebrow": "KALE SAVUNMASI",
+        "headline": "Kuleni kur,\ncepheyi tut",
+        "emphasis": "cepheyi"
+      },
+      {
+        "slot": "powers",
+        "eyebrow": "ÖZEL GÜÇLER",
+        "headline": "Düşmana gökten\nkozalak yağdır",
+        "emphasis": "kozalak"
+      },
+      {
+        "slot": "online",
+        "eyebrow": "TELEFON + TARAYICI",
+        "headline": "Kodu paylaş,\narkadaşını yen",
+        "emphasis": "yen"
+      },
+      {
+        "slot": "closer",
+        "eyebrow": "GOLEM FORGE",
+        "headline": "Golemlerin\nseni bekliyor",
+        "emphasis": "bekliyor",
+        "pills": [
+          "3 bot zorluğu",
+          "Rehberli eğitim",
+          "Güç üçgeni",
+          "15 çağ kartı",
+          "3 karakol",
+          "Eter Kaynağı",
+          "Rövanş",
+          "6 dil"
+        ]
+      }
+    ]
+  },
+  "de": {
+    "eras": [
+      "Holz",
+      "Bronze",
+      "Eisen",
+      "Kristall",
+      "Äther"
+    ],
+    "fgTag": "Golems marschieren. Burgen fallen.",
+    "slides": [
+      {
+        "slot": "hero",
+        "eyebrow": "ECHTZEIT-STRATEGIE",
+        "headline": "Golems marschieren.\nBurgen fallen.",
+        "emphasis": "fallen"
+      },
+      {
+        "slot": "army",
+        "eyebrow": "GOLEM-ARMEE",
+        "headline": "Du baust Golems.\nSie kämpfen.",
+        "emphasis": "kämpfen"
+      },
+      {
+        "slot": "eras",
+        "eyebrow": "5 ÄREN",
+        "headline": "Vom Holzgolem\nzum Äthertitan",
+        "emphasis": "Äthertitan"
+      },
+      {
+        "slot": "cards",
+        "eyebrow": "ÄRA-KARTEN",
+        "headline": "Eine Karte\nwendet das Blatt",
+        "emphasis": "Blatt"
+      },
+      {
+        "slot": "defense",
+        "eyebrow": "BURGVERTEIDIGUNG",
+        "headline": "Bau Türme.\nHalte die Stellung.",
+        "emphasis": "Halte"
+      },
+      {
+        "slot": "powers",
+        "eyebrow": "SPEZIALKRÄFTE",
+        "headline": "Lass es\nZapfen regnen",
+        "emphasis": "Zapfen"
+      },
+      {
+        "slot": "online",
+        "eyebrow": "HANDY + BROWSER",
+        "headline": "Schick den Code.\nBesiege deine Freunde.",
+        "emphasis": "Freunde"
+      },
+      {
+        "slot": "closer",
+        "eyebrow": "GOLEM FORGE",
+        "headline": "Deine Golems\nwarten schon",
+        "emphasis": "warten",
+        "pills": [
+          "3 Bot-Stufen",
+          "Geführtes Tutorial",
+          "Kräftedreieck",
+          "15 Ära-Karten",
+          "3 Vorposten",
+          "Ätherquelle",
+          "Revanche",
+          "6 Sprachen"
+        ]
+      }
+    ]
+  },
+  "es": {
+    "eras": [
+      "Madera",
+      "Bronce",
+      "Hierro",
+      "Cristal",
+      "Éter"
+    ],
+    "fgTag": "Lanza tus gólems. Aplasta su castillo.",
+    "slides": [
+      {
+        "slot": "hero",
+        "eyebrow": "ESTRATEGIA ONLINE",
+        "headline": "Lanza tus gólems.\nAplasta su castillo.",
+        "emphasis": "Aplasta"
+      },
+      {
+        "slot": "army",
+        "eyebrow": "EJÉRCITO DE GÓLEMS",
+        "headline": "Tú forjas gólems.\nEllos luchan.",
+        "emphasis": "luchan"
+      },
+      {
+        "slot": "eras",
+        "eyebrow": "5 ERAS",
+        "headline": "Del gólem de madera\nal titán de éter",
+        "emphasis": "titán"
+      },
+      {
+        "slot": "cards",
+        "eyebrow": "CARTAS DE ERA",
+        "headline": "Una carta cambia\nla partida",
+        "emphasis": "cambia"
+      },
+      {
+        "slot": "defense",
+        "eyebrow": "DEFENSA DEL CASTILLO",
+        "headline": "Pon torretas.\nAguanta el asalto.",
+        "emphasis": "Aguanta"
+      },
+      {
+        "slot": "powers",
+        "eyebrow": "PODERES ESPECIALES",
+        "headline": "Haz llover piñas\nsobre el enemigo",
+        "emphasis": "piñas"
+      },
+      {
+        "slot": "online",
+        "eyebrow": "TELÉFONO + NAVEGADOR",
+        "headline": "Comparte el código.\nVence a tu amigo.",
+        "emphasis": "amigo"
+      },
+      {
+        "slot": "closer",
+        "eyebrow": "GOLEM FORGE",
+        "headline": "Tus gólems\nte esperan",
+        "emphasis": "esperan",
+        "pills": [
+          "3 niveles de bot",
+          "Tutorial guiado",
+          "Triángulo de poder",
+          "15 cartas de era",
+          "3 fortines",
+          "Pozo de Éter",
+          "Revancha",
+          "6 idiomas"
+        ]
+      }
+    ]
+  },
+  "fr": {
+    "eras": [
+      "Bois",
+      "Bronze",
+      "Fer",
+      "Cristal",
+      "Éther"
+    ],
+    "fgTag": "Lance tes golems. Écrase leur château.",
+    "slides": [
+      {
+        "slot": "hero",
+        "eyebrow": "STRATÉGIE EN LIGNE",
+        "headline": "Lance tes golems.\nÉcrase leur château.",
+        "emphasis": "Écrase"
+      },
+      {
+        "slot": "army",
+        "eyebrow": "ARMÉE DE GOLEMS",
+        "headline": "Forge tes golems.\nIls se battent seuls.",
+        "emphasis": "seuls"
+      },
+      {
+        "slot": "eras",
+        "eyebrow": "5 ÂGES",
+        "headline": "Du golem de bois\nau titan d’éther",
+        "emphasis": "titan"
+      },
+      {
+        "slot": "cards",
+        "eyebrow": "CARTES D’ÂGE",
+        "headline": "Une seule carte\nrenverse la partie",
+        "emphasis": "renverse"
+      },
+      {
+        "slot": "defense",
+        "eyebrow": "DÉFENSE DU CHÂTEAU",
+        "headline": "Construis des tourelles.\nTiens bon.",
+        "emphasis": "Tiens"
+      },
+      {
+        "slot": "powers",
+        "eyebrow": "POUVOIRS SPÉCIAUX",
+        "headline": "Fais pleuvoir des pignes\nsur l’ennemi",
+        "emphasis": "pignes"
+      },
+      {
+        "slot": "online",
+        "eyebrow": "MOBILE + NAVIGATEUR",
+        "headline": "Partage le code.\nBats tes amis.",
+        "emphasis": "amis"
+      },
+      {
+        "slot": "closer",
+        "eyebrow": "GOLEM FORGE",
+        "headline": "Tes golems\nt’attendent",
+        "emphasis": "t’attendent",
+        "pills": [
+          "3 niveaux de bot",
+          "Tutoriel guidé",
+          "Triangle des forces",
+          "15 cartes d’âge",
+          "3 avant-postes",
+          "Puits d’éther",
+          "Revanche",
+          "6 langues"
+        ]
+      }
+    ]
+  },
+  "pt": {
+    "eras": [
+      "Madeira",
+      "Bronze",
+      "Ferro",
+      "Cristal",
+      "Éter"
+    ],
+    "fgTag": "Mande seus golens. Esmague o castelo.",
+    "slides": [
+      {
+        "slot": "hero",
+        "eyebrow": "ESTRATÉGIA ONLINE",
+        "headline": "Mande seus golens.\nEsmague o castelo.",
+        "emphasis": "Esmague"
+      },
+      {
+        "slot": "army",
+        "eyebrow": "EXÉRCITO DE GOLENS",
+        "headline": "Você cria golens.\nEles lutam.",
+        "emphasis": "lutam"
+      },
+      {
+        "slot": "eras",
+        "eyebrow": "5 ERAS",
+        "headline": "Do golem de madeira\nao titã de éter",
+        "emphasis": "titã"
+      },
+      {
+        "slot": "cards",
+        "eyebrow": "CARTAS DE ERA",
+        "headline": "Uma carta pode\nvirar o jogo",
+        "emphasis": "virar"
+      },
+      {
+        "slot": "defense",
+        "eyebrow": "DEFESA DO CASTELO",
+        "headline": "Monte torres.\nAguente firme.",
+        "emphasis": "Aguente"
+      },
+      {
+        "slot": "powers",
+        "eyebrow": "PODERES ESPECIAIS",
+        "headline": "Faça chover pinhas\nno inimigo",
+        "emphasis": "pinhas"
+      },
+      {
+        "slot": "online",
+        "eyebrow": "CELULAR + NAVEGADOR",
+        "headline": "Compartilhe o código.\nVença seu amigo.",
+        "emphasis": "amigo"
+      },
+      {
+        "slot": "closer",
+        "eyebrow": "GOLEM FORGE",
+        "headline": "Seus golens\nestão esperando",
+        "emphasis": "esperando",
+        "pills": [
+          "3 níveis de bot",
+          "Tutorial guiado",
+          "Triângulo de poder",
+          "15 cartas de era",
+          "3 postos avançados",
+          "Poço de Éter",
+          "Revanche",
+          "6 idiomas"
+        ]
+      }
+    ]
+  }
+}

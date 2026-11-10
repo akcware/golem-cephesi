@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Golem Forge store screens</title>
+<!--
+  Mağaza görselleri şablonu. Her görsel bu sayfanın bir URL parametresiyle açılmış hâlidir:
+    screens.html?dev=iphone&slide=hero&lang=tr
+  dev: iphone (2868x1320) | ipad (2752x2064) | aphone (2560x1440) | atab (2560x1600) | fg (1024x500)
+  render.mjs tüm kombinasyonları Chrome headless ile PNG'ye döker.
+-->
+<style>
+@font-face { font-family: 'Baloo'; src: url('../../mobile/assets/fonts/Baloo2-ExtraBold.ttf'); font-weight: 800; }
+@font-face { font-family: 'Baloo'; src: url('../../mobile/assets/fonts/Baloo2-SemiBold.ttf'); font-weight: 600; }
+:root {
+  --gold: #ffd23f; --gold2: #ffad1f; --ink: #10162e; --navy: #1b2550;
+  --blue: #3b82f6; --red: #e5484d;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #10162e; }
+body { font-family: 'Baloo', sans-serif; }
+#stage { position: relative; overflow: hidden; }
+.layer { position: absolute; inset: 0; }
+.abs { position: absolute; }
+
+/* --- başlık --- */
+.copy { position: absolute; display: flex; flex-direction: column; align-items: center; text-align: center; z-index: 40; }
+.copy.left { align-items: flex-start; text-align: left; }
+.eyebrow {
+  font-weight: 800; letter-spacing: .14em; color: var(--gold);
+  background: rgba(10, 14, 36, .62); border: .09em solid rgba(255, 210, 63, .85);
+  border-radius: 999px; padding: .28em 1.05em .22em; white-space: nowrap;
+  box-shadow: 0 .25em .9em rgba(0,0,0,.25);
+}
+.headline {
+  font-weight: 800; color: #fff; line-height: 1.02; white-space: nowrap;
+  paint-order: stroke fill; -webkit-text-stroke: .085em var(--ink);
+  text-shadow: 0 .07em 0 var(--ink), 0 .16em .32em rgba(0,0,0,.35);
+  letter-spacing: -.005em;
+}
+.headline .em { color: var(--gold); }
+.sub { font-weight: 600; color: rgba(255,255,255,.92); text-shadow: 0 .08em .2em rgba(0,0,0,.4); }
+
+/* --- aygıt çerçeveleri --- */
+.device { position: absolute; z-index: 20; }
+.device .shell { position: absolute; inset: 0; }
+.device .screen { position: absolute; overflow: hidden; background: #000; }
+.device .screen img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.device .island { position: absolute; background: #000; border-radius: 999px; }
+.device .glare { position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(115deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,0) 32%); }
+
+/* --- süsler --- */
+.cut { position: absolute; z-index: 30; filter: drop-shadow(0 1.2vh 1.4vh rgba(0,0,0,.35)); }
+.chip {
+  position: absolute; z-index: 45; font-weight: 800; color: #fff; white-space: nowrap;
+  background: rgba(12, 18, 44, .82); border: .08em solid rgba(255,255,255,.18);
+  border-radius: 999px; padding: .3em .9em .22em; box-shadow: 0 .3em .9em rgba(0,0,0,.3);
+}
+.loupe { position: absolute; z-index: 35; overflow: hidden; border-radius: 50%;
+  border: solid #fff; box-shadow: 0 1.5vh 4vh rgba(0,0,0,.45), 0 0 0 .6vh rgba(16,22,46,.55); background: #000; }
+.loupe img { position: absolute; }
+.pill {
+  display: inline-block; font-weight: 800; color: var(--ink); white-space: nowrap;
+  background: linear-gradient(180deg, #fff6c9, var(--gold) 55%, var(--gold2));
+  border-radius: 999px; padding: .32em 1em .22em; box-shadow: 0 .18em 0 #b8740a, 0 .4em 1em rgba(0,0,0,.25);
+}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script src="data.js"></script>
+<script src="screens.js"></script>
+</body>
+</html>
