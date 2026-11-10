@@ -84,6 +84,8 @@ export interface IPlayer {
   name: string;
   side: number;
   isBot: boolean;
+  /** Bot türü ('easy' | 'normal' | 'hard' | 'tutor'), insan oyuncuda ''. Ad istemcide çevrilir. */
+  botKind: string;
   connected: boolean;
   left: boolean;
   gold: number;

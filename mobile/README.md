@@ -1,4 +1,4 @@
-# Golem Cephesi — mobil istemci (Defold)
+# Golem Forge — mobil istemci (Defold)
 
 Telefon ve tablet için yerel (WebView'sız) istemci. [Defold](https://defold.com) ile yazıldı: oyun doğrudan
 OpenGL / Vulkan / Metal ile çizilir, Android paketi birkaç MB tutar.

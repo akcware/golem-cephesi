@@ -1,6 +1,7 @@
 // Her kule türünü (5 kademe × 3 derece) sabit duran bir düşman kümesine ateşletip etkisini raporlar.
 // Kullanım: npx tsx tools/turret-check.ts
 import * as B from '../shared/balance';
+import { gradeName, tierName, turretName } from '../shared/i18n';
 import { BattleState, Unit } from '../server/state';
 import { Simulation } from '../server/sim';
 
@@ -30,7 +31,7 @@ function run(tier: number, grade: number) {
     u.arch = 'melee';
     u.tier = 0;
     // yeteneksiz, hareketsiz, çok dayanıklı hedef (Kök Salma gibi yetenekler ölçümü bozmasın)
-    u.def = { ...B.unitDef(0, 'melee'), speed: 0, range: 0, hp: 1e9, ability: { name: '', desc: '', p: {} } };
+    u.def = { ...B.unitDef(0, 'melee'), speed: 0, range: 0, hp: 1e9, ability: { p: {} } };
     u.hp = u.maxHp = 1e9;
     u.x = B.baseFrontX(0) + off + u.def.radius;
     state.units.set(u.id, u);
@@ -50,7 +51,7 @@ function run(tier: number, grade: number) {
   const hit = dmgs.filter((d) => d > 0).length;
   const flags = [maxStatus & 1 ? 'yavaş' : '', maxStatus & 2 ? 'yanma' : ''].filter(Boolean).join(',');
   console.log(
-    `${B.TIERS[tier].name.padEnd(7)} ${def.label.padEnd(5)} ${def.name.padEnd(18)} ${def.kind.padEnd(6)} atış=${t.shots} vurulan=${hit} hasarlar=[${dmgs.join(', ')}] yavaşlayan=${slowed} ${flags}`,
+    `${tierName(tier).padEnd(7)} ${gradeName(def.grade).padEnd(6)} ${turretName(tier, def.grade).padEnd(18)} ${def.kind.padEnd(6)} atış=${t.shots} vurulan=${hit} hasarlar=[${dmgs.join(', ')}] yavaşlayan=${slowed} ${flags}`,
   );
 }
 

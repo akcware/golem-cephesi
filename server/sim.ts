@@ -49,11 +49,13 @@ export class Simulation {
     return taken.has(0) ? 1 : 0;
   }
 
-  addPlayer(id: string, name: string, isBot: boolean): Player {
+  /** botKind: bot türü (ad istemcide bu türden çevrilir); insan oyuncuda verilmez. */
+  addPlayer(id: string, name: string, isBot: boolean, botKind = ''): Player {
     const p = new Player();
     p.id = id;
     p.name = name;
     p.isBot = isBot;
+    p.botKind = botKind;
     p.side = this.freeSide();
     this.resetPlayer(p);
     this.state.players.set(id, p);

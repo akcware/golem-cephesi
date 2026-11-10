@@ -240,7 +240,7 @@ local function build_menu(self)
 	local cx, cy = VW / 2, VH / 2
 	ui.box(cx, cy, 560, 700, { parent = g, color = U.rgb(0x0b1020, 0.86) })
 	ui.text(cx, cy + 300, "GOLEM", { size = 56, font = "big", parent = g, color = C.gold })
-	ui.text(cx, cy + 254, "CEPHESİ", { size = 38, font = "big", parent = g, color = U.rgb(0xffe9a8) })
+	ui.text(cx, cy + 254, "FORGE", { size = 38, font = "big", parent = g, color = U.rgb(0xffe9a8) })
 	ui.text(cx, cy + 216, "Dökümhaneni yükselt, golem ordunu sür, rakip kaleyi yık.", { size = 15, parent = g, font = "small", color = C.dim })
 	-- ad
 	ui.text(cx - 240, cy + 172, "Adın", { size = 16, parent = g, pivot = gui.PIVOT_W, color = C.dim })

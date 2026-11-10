@@ -676,7 +676,7 @@ return {
           xp = 460,
           ability = {
             name = "Kuşatma Ustası",
-            desc = "Kalelere ve karakollara 2.5 kat hasar verir",
+            desc = "Kalelere ve karakollara 2,5 kat hasar verir",
             p = {
               siege = 2.5,
             },
@@ -823,7 +823,7 @@ return {
           xp = 1105,
           ability = {
             name = "Buz Yumruğu",
-            desc = "Vurduğu düşmanı 1.5 sn yavaşlatır",
+            desc = "Vurduğu düşmanı 1,5 sn yavaşlatır",
             p = {
               slowOnHit = 1.5,
             },
@@ -841,7 +841,7 @@ return {
           grade = 0,
           label = "Hafif",
           kind = "frost",
-          desc = "Buz: hedefi 1.5 sn yavaşlatır",
+          desc = "Buz: hedefi 1,5 sn yavaşlatır",
           cost = 1065,
           dmg = 40.9,
           range = 300,

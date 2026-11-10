@@ -1,4 +1,4 @@
-# Golem Cephesi (prototip v0.2)
+# Golem Forge (prototip v0.2)
 
 Tarayıcıda oynanan, online multiplayer bir koridor savaşı oyunu. İki simyacı, kalelerinden golem ordusu döküp karşı kaleye yollar.
 
@@ -60,6 +60,31 @@ npm run dev
 - **Yıkım Saati:** 15. dakikadan sonra kaleler ve karakollar her saniye azami canlarının %0,2'sini kaybeder, birimlerin yapılara verdiği hasar her dakika %30 artar. Savunmalar tam oturunca maç kilitlenmez.
 - Düşman öldürmek altın + XP verir. Kendi birimin ölünce de biraz XP gelir (geride kalan toparlayabilsin).
 - Bağlantısı kopan oyuncu 20 sn içinde geri gelebilir; bu sürede oyun donar.
+
+## Diller
+
+Oyunun ana dili İngilizce; web sürümü İngilizce, Türkçe, Portekizce (Brezilya), İspanyolca, Almanca ve Fransızca
+konuşur. Dil, tarayıcının dil tercihlerinden seçilir (desteklenmiyorsa İngilizce); menünün sol üstündeki 🌐
+listesinden değiştirilir ve cihazda saklanır.
+
+- Metinler `shared/i18n/` altında: `en.ts` kaynak sözlük, diğer diller (`tr.ts`, `pt.ts`, …) onun tipine bağlı,
+  yani eksik ya da fazla anahtar `npm run typecheck`'te hata verir.
+- `shared/balance.ts` ve `shared/tutorial.ts`'te yalnızca id'ler ve sayılar var; adlar/açıklamalar id'den kurulan
+  anahtarlarla gelir (`unit.wood.melee`, `card.foundry.desc`, `tut.intro.title` …). `t()` sayıları dile göre yazar
+  (1.5 / 1,5); yüzde işaretinin yeri (25% / %25) çeviri metninin içinde.
+- Sunucu oyuncuya metin göndermez: botların adı `Player.botKind`'dan her istemcide kendi dilinde yazılır.
+- Yeni dil eklemek: `en.ts`'i kopyalayıp çevir, `shared/i18n/index.ts`'teki `LANGS`, `LANG_NAMES` ve `DICTS`'e ekle,
+  ondalık virgül kullanıyorsa `DECIMAL_COMMA`'ya da ekle. Sonra:
+
+```bash
+npm run i18n:check
+```
+
+Bu araç oyun verisinden kurulan tüm anahtarların her dilde olduğunu, yer tutucuların (`{n}`) ve HTML etiketlerinin
+İngilizceyle aynı olduğunu denetler.
+
+**Mobil sürüm** henüz yalnızca Türkçe: `tools/export-lua.ts` Türkçe metinleri eski veri alanlarına geri koyar,
+sunucu da botların `name` alanına Türkçe adı yazar (`server/BattleRoom.ts`, `LEGACY_NAME_LANG`).
 
 ## Yeni oyuncu rehberi
 

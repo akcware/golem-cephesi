@@ -7,7 +7,7 @@ import type { FxEvent } from '../shared/protocol';
 import { TUTORIAL } from '../shared/tutorial';
 import { BattleState } from '../server/state';
 import { Simulation } from '../server/sim';
-import { Tutorial, TUTOR_NAME } from '../server/tutorial';
+import { Tutorial } from '../server/tutorial';
 
 const DT = B.TICK_MS / 1000;
 let fails = 0;
@@ -22,7 +22,7 @@ function play(label: string, maxUnits: number, delay: number) {
   state.mode = 'tutorial';
   let tut: Tutorial | undefined;
   const sim = new Simulation(state, (fx: FxEvent) => tut?.onFx(fx));
-  const tutor = sim.addPlayer('bot', TUTOR_NAME, true);
+  const tutor = sim.addPlayer('bot', 'Drill Master', true, 'tutor');
   const me = sim.addPlayer('me', 'Çaylak', false);
   const log: string[] = [];
   tut = new Tutorial(sim, tutor, (m) => log.push(m));

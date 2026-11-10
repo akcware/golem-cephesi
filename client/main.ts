@@ -1,3 +1,4 @@
+import './lang'; // önce: arayüz kurulmadan dil seçilsin
 import Phaser from 'phaser';
 import './style.css';
 import { BootScene } from './scenes/BootScene';

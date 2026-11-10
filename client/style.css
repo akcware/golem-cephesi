@@ -832,6 +832,7 @@ kbd {
 .sell {
   pointer-events: auto;
   font-size: 11px;
+  white-space: nowrap; /* iki satıra inerse kule grubu uzar */
   padding: 2px;
   border-radius: 6px;
   border: 1px solid var(--line);
@@ -1148,10 +1149,10 @@ kbd {
   background: #3b4466;
 }
 
-.cardopt.cat-ordu .ccat { background: #8a3a1c; }
-.cardopt.cat-ekonomi .ccat { background: #8a6a12; }
-.cardopt.cat-savunma .ccat { background: #24508a; }
-.cardopt.cat-guc .ccat { background: #5a2f7a; }
+.cardopt.cat-army .ccat { background: #8a3a1c; }
+.cardopt.cat-economy .ccat { background: #8a6a12; }
+.cardopt.cat-defense .ccat { background: #24508a; }
+.cardopt.cat-power .ccat { background: #5a2f7a; }
 
 .cardopt kbd {
   position: absolute;
@@ -1688,6 +1689,35 @@ kbd {
   position: absolute;
   top: max(14px, env(safe-area-inset-top));
   right: max(14px, env(safe-area-inset-right));
+}
+/* ── dil seçimi (menünün sol üstü) ─────────────────────── */
+.menu-lang {
+  position: absolute;
+  top: max(14px, env(safe-area-inset-top));
+  left: max(14px, env(safe-area-inset-left));
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 38px;
+  padding: 0 4px 0 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  cursor: pointer;
+}
+.menu-lang .globe {
+  font-size: 15px;
+}
+.menu .menu-lang select {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 6px 4px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.menu .menu-lang select option {
+  color: #111;
 }
 .menu-foot summary {
   cursor: pointer;

@@ -44,12 +44,6 @@ function armyValue(units: Unit[]): number {
   return v;
 }
 
-export const BOT_NAMES: Record<BotLevel, string> = {
-  easy: 'Çırak Simyacı',
-  normal: 'Usta Simyacı',
-  hard: 'Büyük Simyacı',
-};
-
 export class Bot {
   private timer = 1;
   private cfg: BotConfig;

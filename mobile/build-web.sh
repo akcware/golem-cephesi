@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Defold projesini web (HTML5) için derler: bundle/web/Golem Cephesi/
+# Defold projesini web (HTML5) için derler: bundle/web/Golem Forge/
 # Kullanım: ./build-web.sh [debug|release]
 set -e
 cd "$(dirname "$0")"

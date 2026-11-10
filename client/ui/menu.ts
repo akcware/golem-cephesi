@@ -1,9 +1,28 @@
 // Ana menü (HTML). Oyun alanı arka planda yavaşça kayar.
 import type { BotLevel } from '../../shared/protocol';
+import { getLang, isLang, LANG_NAMES, LANGS, t, type MsgKey } from '../../shared/i18n';
+import { switchLang } from '../lang';
 import { musicButton } from '../music';
 import { TRACKS } from '../tracks';
 import { h } from './dom';
 import { tutorialDone } from './onboarding';
+
+/** "Nasıl oynanır?" maddeleri (sırayla). */
+const HOWTO: MsgKey[] = Array.from({ length: 13 }, (_, i) => `menu.howto.${i + 1}` as MsgKey);
+
+/** Dil seçimi (menünün sol üstü). Diller kendi adlarıyla listelenir. */
+function langSelect(): HTMLElement {
+  const sel = h(
+    'select',
+    { 'aria-label': t('menu.language') },
+    ...LANGS.map((l) => h('option', { value: l, lang: l, text: LANG_NAMES[l] })),
+  );
+  sel.value = getLang();
+  sel.addEventListener('change', () => {
+    if (isLang(sel.value) && sel.value !== getLang()) switchLang(sel.value);
+  });
+  return h('label', { class: 'menu-lang', title: t('menu.language') }, h('span', { class: 'globe', text: '🌐', 'aria-hidden': 'true' }), sel);
+}
 
 export interface MenuHandlers {
   bot(level: BotLevel): void;
@@ -42,23 +61,23 @@ export class Menu {
     this.nameInput = h('input', {
       id: 'name',
       maxlength: 16,
-      value: load('gc_name', `Simyacı${Math.floor(100 + Math.random() * 900)}`),
+      value: load('gc_name', `${t('player.default')}${Math.floor(100 + Math.random() * 900)}`),
       autocomplete: 'off',
     });
     this.nameInput.addEventListener('change', () => save('gc_name', this.name));
 
     this.levelSelect = h(
       'select',
-      { 'aria-label': 'Bot zorluğu' },
-      h('option', { value: 'easy', text: 'Kolay' }),
-      h('option', { value: 'normal', text: 'Normal' }),
-      h('option', { value: 'hard', text: 'Zor' }),
+      { 'aria-label': t('menu.botLevel') },
+      h('option', { value: 'easy', text: t('menu.level.easy') }),
+      h('option', { value: 'normal', text: t('menu.level.normal') }),
+      h('option', { value: 'hard', text: t('menu.level.hard') }),
     );
     // ilk maçlar için kolay bot önerilir
     this.levelSelect.value = load('gc_level', tutorialDone() ? 'normal' : 'easy');
     this.levelSelect.addEventListener('change', () => save('gc_level', this.levelSelect.value));
 
-    this.codeInput = h('input', { class: 'code', maxlength: 4, placeholder: 'KOD', autocomplete: 'off', spellcheck: 'false' });
+    this.codeInput = h('input', { class: 'code', maxlength: 4, placeholder: t('menu.code'), autocomplete: 'off', spellcheck: 'false' });
     this.codeInput.addEventListener('input', () => {
       this.codeInput.value = this.codeInput.value.toUpperCase().replace(/[^A-Z]/g, '');
     });
@@ -83,53 +102,37 @@ export class Menu {
       h(
         'div',
         { class: 'menu-card' },
-        h('div', { class: 'logo' }, h('span', { class: 'logo-top', text: 'GOLEM' }), h('span', { class: 'logo-bottom', text: 'CEPHESİ' })),
-        h('p', { class: 'tag', text: 'Dökümhaneni yükselt, golem ordunu sür, rakip kaleyi yık.' }),
-        h('label', { class: 'field' }, h('span', { text: 'Adın' }), this.nameInput),
-        (this.tutBtn = btn('Eğitimle Başla', 'btn tutorial', () => handlers.tutorial())),
-        (this.tutHint = h('p', { class: 'tuthint', text: 'İlk kez mi oynuyorsun? 3-4 dakikalık rehberli maç her şeyi gösterir.' })),
+        h('div', { class: 'logo' }, h('span', { class: 'logo-top', text: 'GOLEM' }), h('span', { class: 'logo-bottom', text: 'FORGE' })),
+        h('p', { class: 'tag', text: t('menu.tagline') }),
+        h('label', { class: 'field' }, h('span', { text: t('menu.name') }), this.nameInput),
+        (this.tutBtn = btn(t('menu.tutorial'), 'btn tutorial', () => handlers.tutorial())),
+        (this.tutHint = h('p', { class: 'tuthint', text: t('menu.tutorialHint') })),
         h(
           'div',
           { class: 'row' },
-          (this.botBtn = btn('Bota Karşı Oyna', 'btn primary grow', () => handlers.bot(this.levelSelect.value as BotLevel))),
+          (this.botBtn = btn(t('menu.bot'), 'btn primary grow', () => handlers.bot(this.levelSelect.value as BotLevel))),
           this.levelSelect,
         ),
-        btn('Hızlı Eşleşme', 'btn', () => handlers.quick()),
-        h('div', { class: 'divider', text: 'arkadaşınla' }),
+        btn(t('menu.quick'), 'btn', () => handlers.quick()),
+        h('div', { class: 'divider', text: t('menu.withFriend') }),
         h(
           'div',
           { class: 'row' },
-          btn('Oda Kur', 'btn grow', () => handlers.create()),
+          btn(t('menu.create'), 'btn grow', () => handlers.create()),
           this.codeInput,
-          btn('Katıl', 'btn', doJoin),
+          btn(t('menu.join'), 'btn', doJoin),
         ),
         h(
           'details',
           { class: 'howto' },
-          h('summary', { text: 'Nasıl oynanır?' }),
-          h(
-            'ul',
-            {},
-            h('li', { html: 'Altınla golem üret (<kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd>). Golemler kendiliğinden ilerleyip savaşır.' }),
-            h('li', { html: '<b>Güç üçgeni:</b> Yakın dövüş › Menzilli › Ağır › Yakın dövüş. Doğru karşılıkla 1.5× hasar.' }),
-            h('li', { html: 'Düşman öldürmek altın ve XP verir. XP dolunca dökümhaneyi yükselt (<kbd>E</kbd>): Ahşap → Bronz → Demir → Kristal → Eter.' }),
-            h('li', { html: '<b>Savun / Hücum</b> (<kbd>S</kbd>): Savunda ordu kale önünde toplanır; yeterince büyüyünce hücuma geç. Tek tek giden golemler eriyip gider, toplu dalga kazanır.' }),
-            h('li', { html: '<b>Yetenekler:</b> Her çağın birimleri farklıdır: kök salan ahşap muhafız, kalkanlı bronz, zırhlı demir şövalye, hasar yansıtan kristal, dirilen eter bekçisi… (butonların üstüne gel).' }),
-            h('li', { html: '<b>Karakollar:</b> Koridordaki 3 noktayı birimlerinle tutarak ele geçir (+%25 gelir). Karakol kurarsan (<kbd>K</kbd>) birimlerin oradan doğar ve düşman yıkmadan geçemez. Karakol silahsız kurulur; üstüne kule ekleyebilirsin.' }),
-            h('li', { html: '<b>Kuleler:</b> Her çağda Hafif / Orta / Ağır üç kule var ve her biri farklı saldırır: ok, bomba, delici balista, ateş, buz, lazer, zincir şimşek. Yuvaya tıklayıp seç (<kbd>T</kbd>: parana yeten en iyisini kurar).' }),
-            h('li', { html: '<b>Çağ kartları:</b> Her kademe atlayışında 3 karttan birini seç (<kbd>Z</kbd> <kbd>X</kbd> <kbd>C</kbd>): ucuz ağır golemler, seken kule atışları, çifte özel güç… Her maç farklı bir yapıya döner.' }),
-            h('li', { html: '<b>Komutan:</b> Maç başında bedava gelir, öldürdükçe seviye atlar, ölürse 30 sn sonra döner. <kbd>R</kbd>: Sarsıcı Darbe, öndeki düşmanların üstüne atılıp onları sersemletir.' }),
-            h('li', { html: '<b>Eter Kaynağı:</b> 2. dakikadan itibaren ortanın bir yanında belirir. Alanında 6 sn sadece senin birimlerin durursa ödül (altın, öfke ya da şifa) senin.' }),
-            h('li', { html: '<b>Yıkım Saati:</b> 15. dakikadan sonra kaleler ve karakollar yavaşça çöker; maç kilitlenmez.' }),
-            h('li', { html: 'Ağır golemler kaleye ekstra hasar verir. Özel güç (<kbd>Q</kbd>) düşmanın ön saflarını vurur.' }),
-            h('li', { html: 'Haritayı sürükle, fare tekerleği ya da <kbd>A</kbd>/<kbd>D</kbd> ile kaydır.' }),
-          ),
+          h('summary', { text: t('menu.howto') }),
+          h('ul', {}, ...HOWTO.map((k) => h('li', { html: t(k) }))),
         ),
       ),
       h(
         'details',
         { class: 'menu-foot' },
-        h('summary', { text: 'Prototip v0.2 · Müzik künyesi' }),
+        h('summary', { text: t('menu.footer') }),
         h(
           'ul',
           { class: 'credits' },
@@ -141,10 +144,11 @@ export class Menu {
               ` · ${t.author} · ${t.license}`,
             ),
           ),
-          h('li', { class: 'note', text: 'Parçaların baş/son sessizlikleri kırpıldı ve sıkıştırıldı.' }),
+          h('li', { class: 'note', text: t('menu.creditsNote') }),
         ),
       ),
       musicButton('menu-music'),
+      langSelect(),
     );
     root.append(this.el);
     this.refresh();
@@ -154,13 +158,13 @@ export class Menu {
   refresh() {
     const done = tutorialDone();
     this.tutBtn.className = done ? 'btn tutorial small' : 'btn tutorial primary';
-    this.tutBtn.textContent = done ? 'Eğitimi tekrar oyna' : 'Eğitimle Başla';
+    this.tutBtn.textContent = done ? t('menu.tutorialAgain') : t('menu.tutorial');
     this.tutHint.classList.toggle('hidden', done);
     this.botBtn.classList.toggle('primary', done);
   }
 
   get name(): string {
-    const n = this.nameInput.value.trim().slice(0, 16) || 'Simyacı';
+    const n = this.nameInput.value.trim().slice(0, 16) || t('player.default');
     save('gc_name', n);
     return n;
   }

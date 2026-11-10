@@ -2,6 +2,7 @@
 // büyük patlamalarda kısa kısılma. Parçalar public/music/ altında, liste tracks.ts'te.
 // Uzun parçalar <audio> ile akarak çalar (tamamı belleğe açılmaz), ses seviyesi WebAudio'dan
 // yönetilir (iOS'ta <audio>.volume değiştirilemiyor).
+import { t } from '../shared/i18n';
 import { audioContext } from './sfx';
 import { DUCK, FADE_S, MUSIC_GAIN, TRACKS, type Track, type TrackId } from './tracks';
 
@@ -179,7 +180,7 @@ const buttons = new Set<HTMLButtonElement>();
 function renderButtons() {
   for (const b of buttons) {
     b.classList.toggle('off', off);
-    b.title = off ? 'Müzik kapalı (açmak için tıkla)' : 'Müzik açık (kapatmak için tıkla)';
+    b.title = off ? t('music.off') : t('music.on');
   }
 }
 
@@ -187,7 +188,7 @@ export function musicButton(extraClass = ''): HTMLButtonElement {
   const b = document.createElement('button');
   b.className = `icon-btn music-btn ${extraClass}`.trim();
   b.textContent = '🎵';
-  b.setAttribute('aria-label', 'Müzik');
+  b.setAttribute('aria-label', t('music.label'));
   b.addEventListener('click', () => music.toggle());
   buttons.add(b);
   renderButtons();

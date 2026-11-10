@@ -1,4 +1,5 @@
 // Küçük DOM yardımcıları.
+import { t } from '../../shared/i18n';
 type Attrs = Record<string, string | number | boolean | EventListener | undefined>;
 
 export function h<K extends keyof HTMLElementTagNameMap>(
@@ -24,6 +25,19 @@ export function setText(el: HTMLElement, text: string) {
   if (el.textContent !== text) el.textContent = text;
 }
 
+/**
+ * Tek satırlık metin maxWidth'e sığmazsa yazı boyutunu küçültür (minPx'e kadar).
+ * Uzun dillerde birim/kule adları düğmeden taşmasın diye. Görünmeyen öğeye dokunmaz.
+ */
+export function fitText(el: HTMLElement, maxWidth: number, minPx = 9) {
+  el.style.fontSize = '';
+  if (!el.offsetParent || maxWidth <= 0) return;
+  const w = Math.max(el.scrollWidth, el.getBoundingClientRect().width);
+  if (w <= maxWidth) return;
+  const size = parseFloat(getComputedStyle(el).fontSize);
+  el.style.fontSize = `${Math.max(minPx, Math.floor(((size * maxWidth) / w) * 2) / 2)}px`;
+}
+
 export function setClass(el: HTMLElement, cls: string, on: boolean) {
   if (el.classList.contains(cls) !== on) el.classList.toggle(cls, on);
 }
@@ -46,5 +60,5 @@ export function fmtTime(s: number): string {
 }
 
 export function fmtNum(n: number): string {
-  return n >= 10000 ? `${(n / 1000).toFixed(1)}B` : String(Math.floor(n));
+  return n >= 10000 ? t('num.thousand', { n: Math.floor(n / 100) / 10 }) : String(Math.floor(n));
 }

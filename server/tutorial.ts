@@ -10,7 +10,6 @@ import type { Simulation } from './sim';
 import type { Player } from './state';
 
 /** Rakip tarafın adı. */
-export const TUTOR_NAME = 'Talim Ustası';
 
 /** Oyuncunun kalesi bu oranın altına inmez; rakip kale son adıma kadar bu oranın altına inmez. */
 const MY_FLOOR = 0.5;

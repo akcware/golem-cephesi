@@ -4,8 +4,9 @@ import * as B from '../shared/balance';
 import type { BotLevel, GameMode, JoinOptions } from '../shared/protocol';
 import { BattleState, Player } from './state';
 import { Simulation } from './sim';
-import { Bot, BOT_NAMES } from './bot';
-import { Tutorial, TUTOR_NAME } from './tutorial';
+import { botName } from '../shared/i18n';
+import { Bot } from './bot';
+import { Tutorial } from './tutorial';
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // karışan I ve O yok
 const usedCodes = new Set<string>();
@@ -21,9 +22,16 @@ function generateCode(): string {
   }
 }
 
+/**
+ * Botların `name` alanı yalnızca adı botKind'dan çevirmeyen istemciler içindir: şu an tek örneği,
+ * henüz yalnızca Türkçe olan mobil (Defold) istemci. Web istemcisi adı botKind'dan kendi dilinde yazar.
+ * Mobil çok dilli olunca bu 'en' yapılabilir.
+ */
+const LEGACY_NAME_LANG = 'tr';
+
 function cleanName(raw: unknown): string {
   const s = typeof raw === 'string' ? raw.replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 16) : '';
-  return s || 'Simyacı';
+  return s || 'Alchemist';
 }
 
 export class BattleRoom extends Room<{ state: BattleState }> {
@@ -53,7 +61,7 @@ export class BattleRoom extends Room<{ state: BattleState }> {
     if (mode === 'bot') {
       this.maxClients = 1;
       const level: BotLevel = options?.level === 'easy' || options?.level === 'hard' ? options.level : 'normal';
-      const botPlayer = this.sim.addPlayer('bot', BOT_NAMES[level], true);
+      const botPlayer = this.sim.addPlayer('bot', botName(level, LEGACY_NAME_LANG), true, level);
       this.bot = new Bot(this.sim, botPlayer, level);
     }
 
@@ -61,7 +69,7 @@ export class BattleRoom extends Room<{ state: BattleState }> {
       // Eğitim: rakip tarafı senaryolu eğitmen oynar. Adım ilerlemesi sunucu günlüğüne yazılır
       // (oyuncuların nerede bıraktığını görmek için).
       this.maxClients = 1;
-      const tutor = this.sim.addPlayer('bot', TUTOR_NAME, true);
+      const tutor = this.sim.addPlayer('bot', botName('tutor', LEGACY_NAME_LANG), true, 'tutor');
       this.tutorial = new Tutorial(this.sim, tutor, (m) => console.log(`[eğitim ${this.roomId}] ${m}`));
     }
 

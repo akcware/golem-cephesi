@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Golem Cephesi - online multiplayer koridor savaşı oyunu (prototip)",
+  "description": "Golem Forge - online multiplayer lane battle game (prototype)",
   "scripts": {
     "dev": "concurrently -k -n server,client -c magenta,cyan \"npm:dev:server\" \"npm:dev:client\"",
     "dev:server": "tsx watch server/index.ts --port=2567 --dev",
@@ -12,6 +12,7 @@
     "start": "tsx server/index.ts",
     "typecheck": "tsc --noEmit",
     "balance": "tsx tools/balance-sim.ts",
+    "i18n:check": "tsx tools/i18n-check.ts",
     "mobile:assets": "tsx tools/export-lua.ts && tsx tools/bake-mobile.ts && tsx tools/bake-sounds.ts && tsx tools/bake-music.ts",
     "icon": "tsx tools/bake-icon.ts"
   },

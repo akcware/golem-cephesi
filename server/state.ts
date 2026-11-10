@@ -16,6 +16,8 @@ export class Player extends Schema {
   @type('string') name = '';
   @type('uint8') side = 0;
   @type('boolean') isBot = false;
+  /** Bot türü ('easy' | 'normal' | 'hard' | 'tutor'; insan oyuncuda boş). İstemci bot adını kendi dilinde yazar. */
+  @type('string') botKind = '';
   @type('boolean') connected = true;
   @type('boolean') left = false;
   @type('uint32') gold = 0;

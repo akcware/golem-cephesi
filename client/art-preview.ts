@@ -3,6 +3,7 @@
 import Phaser from 'phaser';
 import * as B from '../shared/balance';
 import type { Arch } from '../shared/balance';
+import { tierName, turretName, unitName } from '../shared/i18n';
 import {
   ART_SCALE,
   CASTLE_H,
@@ -158,7 +159,7 @@ class Gallery extends Phaser.Scene {
     for (let t = 0; t <= B.MAX_TIER; t++) {
       const gy = 26 + rowH * (t + 1) - 14;
       backdrop(this, gy - rowH + 6, gy + 8, gy);
-      label(this, 44, gy - 70, B.TIERS[t].name, 14);
+      label(this, 44, gy - 70, tierName(t), 14);
       let x = 120;
       const s = 1.5;
       for (const arch of B.ARCHES) {
@@ -197,7 +198,7 @@ class Gallery extends Phaser.Scene {
     unit(this, t, 'heavy', 'a', x + 420, 632, s, { swing: 0.45 });
     unit(this, t, 'ranged', 'e', x + 640, 632, s, { walk: 1.3 });
     unit(this, t, 'heavy', 'e', x + 900, 632, s, { walk: 0.3 });
-    label(this, 640, 34, `${B.TIERS[t].name}: ${Object.values(B.TIERS[t].units).map((u) => u.name).join(' · ')}`, 15);
+    label(this, 640, 34, `${tierName(t)}: ${B.ARCHES.map((a) => unitName(t, a)).join(' · ')}`, 15);
   }
 
   castles() {
@@ -205,7 +206,7 @@ class Gallery extends Phaser.Scene {
     backdrop(this, 370, H, 680);
     for (let t = 0; t <= B.MAX_TIER; t++) {
       castleWithTurrets(this, t, 'a', 130 + t * 252, 370, 0.84);
-      label(this, 130 + t * 252, 34, B.TIERS[t].name);
+      label(this, 130 + t * 252, 34, tierName(t));
     }
     for (let t = 0; t <= B.MAX_TIER; t++) castleWithTurrets(this, t, 'e', 130 + t * 252, 680, 0.84, 0.5);
   }
@@ -237,7 +238,7 @@ class Gallery extends Phaser.Scene {
           .setScale(1 / ART_SCALE)
           .setRotation(0.6);
         if (this.textures.exists(keys.tproj(t, g))) this.add.image(x + 200, y - 60, keys.tproj(t, g)).setScale(2 / ART_SCALE);
-        label(this, x + 60, y + 30, B.TIERS[t].turrets[g].name, 12);
+        label(this, x + 60, y + 30, turretName(t, g), 12);
       }
     }
   }
@@ -247,7 +248,7 @@ class Gallery extends Phaser.Scene {
     const s = 3;
     for (let t = 0; t <= B.MAX_TIER; t++) {
       const x = 90 + t * 240;
-      label(this, x + 40, 40, B.TIERS[t].name);
+      label(this, x + 40, 40, tierName(t));
       const p = this.add.image(x, 110, keys.proj(t)).setScale(s / ART_SCALE);
       if (t >= 3) p.setBlendMode(Phaser.BlendModes.ADD);
       const sp = this.add.image(x + 100, 140, keys.spec(t)).setScale((s * 1.4) / ART_SCALE / 1.5);
@@ -255,7 +256,7 @@ class Gallery extends Phaser.Scene {
       for (let g = 0; g < 3; g++) {
         const tp = this.add.image(x + 40, 280 + g * 110, keys.tproj(t, g)).setScale(s / ART_SCALE);
         if (t >= 3) tp.setBlendMode(Phaser.BlendModes.ADD);
-        label(this, x + 40, 320 + g * 110, B.TIERS[t].turrets[g].name, 11);
+        label(this, x + 40, 320 + g * 110, turretName(t, g), 11);
       }
     }
     let x = 80;
@@ -309,7 +310,7 @@ function showIcons(icons: ReturnType<typeof buildIcons>) {
     row.className = 'row';
     const l = document.createElement('div');
     l.className = 'lbl';
-    l.textContent = B.TIERS[t].name;
+    l.textContent = tierName(t);
     row.appendChild(l);
     const add = (src: string, small = false) => {
       const cell = document.createElement('div');

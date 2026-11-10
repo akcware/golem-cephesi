@@ -1,6 +1,7 @@
 // Bot'a karşı bot maçlarını ekran olmadan hızlıca oynatıp denge raporu çıkarır.
 // Kullanım: npm run balance  (veya: npx tsx tools/balance-sim.ts 40 normal hard)
 import * as B from '../shared/balance';
+import { tierName } from '../shared/i18n';
 import type { BotLevel } from '../shared/protocol';
 import { BattleState } from '../server/state';
 import { Simulation } from '../server/sim';
@@ -91,6 +92,6 @@ console.log(`Ortalama süre: ${fmt(avg(results.map((r) => r.duration)))}  (min $
 for (let t = 1; t <= B.MAX_TIER; t++) {
   const times = results.flatMap((r) => [r.tierTimes[0][t], r.tierTimes[1][t]]).filter((x) => x !== undefined);
   const reached = times.length / (games * 2);
-  console.log(`${B.TIERS[t].name.padEnd(8)} ulaşılma: %${Math.round(reached * 100).toString().padStart(3)}  ortalama zaman: ${times.length ? fmt(avg(times)) : '-'}`);
+  console.log(`${tierName(t).padEnd(8)} ulaşılma: %${Math.round(reached * 100).toString().padStart(3)}  ortalama zaman: ${times.length ? fmt(avg(times)) : '-'}`);
 }
 console.log(`Ortalama öldürme: ${Math.round(avg(results.flatMap((r) => r.kills)))}`);

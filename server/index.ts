@@ -29,6 +29,6 @@ const server = defineServer({
 });
 
 server.listen(port).then(() => {
-  console.log(`⚔  Golem Cephesi sunucusu hazır: http://localhost:${port}`);
+  console.log(`⚔  Golem Forge sunucusu hazır: http://localhost:${port}`);
   if (fs.existsSync(distDir)) console.log('   (derlenmiş istemci de bu adresten sunuluyor)');
 });

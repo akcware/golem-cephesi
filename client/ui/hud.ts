@@ -9,9 +9,33 @@ import type { IconSet } from '../textures';
 import { sfx } from '../sfx';
 import { music, musicButton } from '../music';
 import { TENSION_HP } from '../tracks';
-import { fmtNum, fmtTime, h, setClass, setText, toast } from './dom';
+import { fitText, fmtNum, fmtTime, h, setClass, setText, toast } from './dom';
 import { TUTORIAL, TUT_REVEAL, tipDef, tutIndex, type TutTarget } from '../../shared/tutorial';
 import { markTip, pendingTip, setTutorialDone } from './onboarding';
+import {
+  abilityDesc,
+  abilityName,
+  archName,
+  cardCatName,
+  cardDesc,
+  cardName,
+  fmtDec,
+  fmtPct,
+  gradeName,
+  playerName,
+  sourceDesc,
+  sourceName,
+  specialName,
+  t,
+  tierName,
+  tipText,
+  turretDesc,
+  turretName,
+  tutButton,
+  tutText,
+  tutTitle,
+  unitName,
+} from '../../shared/i18n';
 
 const KEYS: Record<Arch, string> = { melee: '1', ranged: '2', heavy: '3' };
 
@@ -112,6 +136,9 @@ export class Hud {
     this.build();
     root.append(this.el);
     window.addEventListener('keydown', (e) => this.onKey(e));
+    // uzun dillerde adlar düğmeye sığsın: ekran boyutu ve yazı tipi değişince yeniden ölç
+    window.addEventListener('resize', () => this.refitLabels());
+    void document.fonts?.ready.then(() => this.refitLabels());
     scene.events.on('coin', (x: number, y: number, n: number) => this.flyCoins(x, y, n));
   }
 
@@ -144,15 +171,15 @@ export class Hud {
       if (e.buttons) mmMove(e);
     });
 
-    this.muteBtn = h('button', { class: 'icon-btn', title: 'Efekt sesleri', onclick: () => this.toggleMute() });
+    this.muteBtn = h('button', { class: 'icon-btn', title: t('hud.sfx'), onclick: () => this.toggleMute() });
     this.renderMute();
     this.musicBtn = musicButton();
-    const leaveBtn = h('button', { class: 'icon-btn', title: 'Maçtan çık', text: '✕', onclick: () => this.confirmLeave() });
+    const leaveBtn = h('button', { class: 'icon-btn', title: t('hud.leave'), text: '✕', onclick: () => this.confirmLeave() });
 
     // ileri karakol noktaları (ekranda soldan sağa: benim kalemden rakibe)
     const opsRow = h('div', {
       class: 'ops',
-      title: 'Noktayı ele geçirmek için birimlerin orada tek başına 3 sn kalmalı. Her nokta +%25 gelir. Karakol kurarsan birimlerin oradan doğar ve düşman yıkmadan geçemez. Karakol silahsız kurulur; üstüne ayrıca kule ekleyebilirsin (K).',
+      title: t('hud.opsTitle'),
     });
     for (let s = 0; s < B.OUTPOST_XS.length; s++) {
       const label = h('span', { class: 'oplabel' });
@@ -163,7 +190,7 @@ export class Hud {
 
     this.srcEl = h('div', {
       class: 'srcinfo',
-      title: `Eter Kaynağı: ortanın bir yanında belirir. Alanında ${B.SOURCE_TIME} sn sadece senin birimlerin durursa ödül senin.`,
+      title: t('hud.srcTitle', { n: B.SOURCE_TIME }),
     });
     const top = h(
       'div',
@@ -177,7 +204,7 @@ export class Hud {
     this.goldEl = h('b', { text: '0' });
     this.incomeEl = h('small');
     this.countEl = h('span', { class: 'count' });
-    this.furyEl = h('span', { class: 'fury hidden', title: B.SOURCE_KINDS.fury.desc });
+    this.furyEl = h('span', { class: 'fury hidden', title: sourceDesc('fury') });
     const res = h('div', { class: 'res card' }, h('span', { class: 'coin' }), this.goldEl, this.incomeEl, this.countEl, this.furyEl);
 
     // birim butonları
@@ -200,7 +227,7 @@ export class Hud {
     }
 
     // üretim kuyruğu
-    const queue = h('div', { class: 'group queue', title: 'Üretim sırası (tıkla: iptal et, altın iade)' });
+    const queue = h('div', { class: 'group queue', title: t('hud.queueTitle') });
     for (let i = 0; i < B.MAX_QUEUE; i++) {
       const img = h('img', { alt: '' });
       const prog = h('div', { class: 'prog' });
@@ -216,7 +243,7 @@ export class Hud {
       const label = h('span', { class: 'slabel' });
       const cost = h('span', { class: 'scost' });
       const main = h('button', { class: 'smain', onclick: () => this.slotAction(i) }, img, label, cost);
-      const sell = h('button', { class: 'sell', title: 'Kuleyi sat', text: 'Sat', onclick: () => this.send('turret_sell', { slot: i }) });
+      const sell = h('button', { class: 'sell', title: t('hud.sellTitle'), text: t('hud.sell'), onclick: () => this.send('turret_sell', { slot: i }) });
       const el = h('div', { class: 'slot' }, main, sell);
       this.slotEls.push({ el, main, img, label, cost, sell });
       slots.append(el);
@@ -245,7 +272,7 @@ export class Hud {
       'button',
       {
         class: 'cmdbtn',
-        title: `${B.CMD_SKILL_NAME}: komutan öndeki düşmanların üstüne atılır, çevresine büyük hasar verip onları sersemletir (R). Komutan öldürdükçe seviye atlar; ölürse ${B.CMD_RESPAWN} sn sonra döner.`,
+        title: t('hud.cmdTitle', { skill: t('cmd.skill'), n: B.CMD_RESPAWN }),
         onclick: () => this.send('cmd_skill'),
       },
       this.cmdImg,
@@ -301,8 +328,8 @@ export class Hud {
     const cStep = h('span', { class: 'cstep' });
     const cTitle = h('b', { class: 'ctitle' });
     const cText = h('p', { class: 'ctext' });
-    const cNext = h('button', { class: 'btn primary', text: 'Devam', onclick: () => this.send('tut_next') });
-    const cSkip = h('button', { class: 'btn small', text: 'Eğitimi geç', onclick: () => this.skipTutorial() });
+    const cNext = h('button', { class: 'btn primary', text: t('hud.continue'), onclick: () => this.send('tut_next') });
+    const cSkip = h('button', { class: 'btn small', text: t('hud.skipTutorial'), onclick: () => this.skipTutorial() });
     this.coach = {
       el: h('div', { class: 'coach hidden' }, h('div', { class: 'chead' }, cTitle, cStep), cText, h('div', { class: 'crow' }, cSkip, cNext)),
       step: cStep,
@@ -313,7 +340,7 @@ export class Hud {
     };
     const tipText = h('span', { class: 'ttext' });
     this.tipBox = {
-      el: h('div', { class: 'tipbox hidden' }, h('span', { class: 'ticon', text: '💡' }), tipText, h('button', { class: 'btn small', text: 'Tamam', onclick: () => this.hideTip() })),
+      el: h('div', { class: 'tipbox hidden' }, h('span', { class: 'ticon', text: '💡' }), tipText, h('button', { class: 'btn small', text: t('hud.ok'), onclick: () => this.hideTip() })),
       text: tipText,
     };
 
@@ -332,7 +359,7 @@ export class Hud {
     this.offerEl.innerHTML = '';
     setClass(this.offerEl, 'hidden', !key);
     if (!key) return;
-    this.offerEl.append(h('div', { class: 'otitle', text: `Çağ kartı seç${me.picks > 1 ? ` (${me.picks} hak)` : ''}` }));
+    this.offerEl.append(h('div', { class: 'otitle', text: me.picks > 1 ? t('hud.offerMany', { n: me.picks }) : t('hud.offer') }));
     const row = h('div', { class: 'orow' });
     ids.forEach((id, i) => {
       const c = B.cardDef(id);
@@ -340,11 +367,11 @@ export class Hud {
       row.append(
         h(
           'button',
-          { class: `cardopt cat-${c.cat === 'güç' ? 'guc' : c.cat}`, onclick: () => this.pickCard(id) },
+          { class: `cardopt cat-${c.cat}`, onclick: () => this.pickCard(id) },
           h('span', { class: 'cicon', text: c.icon }),
-          h('b', { class: 'cname', text: c.name }),
-          h('span', { class: 'cdesc', text: c.desc }),
-          h('span', { class: 'ccat', text: c.cat }),
+          h('b', { class: 'cname', text: cardName(id) }),
+          h('span', { class: 'cdesc', text: cardDesc(id) }),
+          h('span', { class: 'ccat', text: cardCatName(c.cat) }),
           h('kbd', { text: CARD_KEYS[i].toUpperCase() }),
         ),
       );
@@ -367,7 +394,7 @@ export class Hud {
     card.chips.innerHTML = '';
     for (const id of ids) {
       const c = B.cardDef(id);
-      if (c) card.chips.append(h('span', { class: 'chip', text: c.icon, title: `${c.name}: ${c.desc}` }));
+      if (c) card.chips.append(h('span', { class: 'chip', text: c.icon, title: `${cardName(id)}: ${cardDesc(id)}` }));
     }
   }
 
@@ -414,29 +441,30 @@ export class Hud {
 
   onFx(fx: FxEvent) {
     if (fx.t === 'evolve') {
-      const name = B.TIERS[fx.tier].name;
-      this.showBanner(fx.side === this.side ? `${name} kademesine yükseldin!` : `Rakip ${name} kademesine yükseldi!`, fx.side === this.side ? 'good' : 'warn');
+      const tier = tierName(fx.tier);
+      this.showBanner(t(fx.side === this.side ? 'banner.evolveMine' : 'banner.evolveFoe', { tier }), fx.side === this.side ? 'good' : 'warn');
     } else if (fx.t === 'special' && fx.side !== this.side) {
-      this.showBanner(`Rakip: ${B.TIERS[fx.tier].special.name}!`, 'warn');
+      this.showBanner(t('banner.foeSpecial', { name: specialName(fx.tier) }), 'warn');
     } else if (fx.t === 'outpost') {
       const mine = fx.side === this.side;
-      if (fx.k === 'captured') this.showBanner(mine ? 'Nokta ele geçirildi! (+%25 gelir)' : 'Rakip bir nokta aldı', mine ? 'good' : 'warn');
-      else if (fx.k === 'lost' && mine) this.showBanner('Bir noktayı kaybettin', 'warn');
-      else if (fx.k === 'destroyed') this.showBanner(mine ? 'Karakolun yıkıldı!' : 'Rakip karakolunu yıktın!', mine ? 'warn' : 'good');
+      if (fx.k === 'captured') this.showBanner(t(mine ? 'banner.pointMine' : 'banner.pointFoe'), mine ? 'good' : 'warn');
+      else if (fx.k === 'lost' && mine) this.showBanner(t('banner.pointLost'), 'warn');
+      else if (fx.k === 'destroyed') this.showBanner(t(mine ? 'banner.outpostLost' : 'banner.outpostKill'), mine ? 'warn' : 'good');
       else if (fx.k === 'built' && mine) sfx.evolve();
     } else if (fx.t === 'src') {
       const info = B.SOURCE_KINDS[fx.kind as B.SourceKind];
       if (!info) return;
-      if (fx.k === 'spawn') this.showBanner(`Eter Kaynağı belirdi: ${info.icon} ${info.name}`, 'good');
-      else if (fx.side === this.side) this.showBanner(`Kaynak senin! ${info.icon} ${info.name}`, 'good');
-      else this.showBanner(`Rakip kaynağı aldı: ${info.icon} ${info.name}`, 'warn');
+      const p = { icon: info.icon, name: sourceName(fx.kind) };
+      if (fx.k === 'spawn') this.showBanner(t('banner.srcSpawn', p), 'good');
+      else if (fx.side === this.side) this.showBanner(t('banner.srcMine', p), 'good');
+      else this.showBanner(t('banner.srcFoe', p), 'warn');
     } else if (fx.t === 'card' && fx.side !== this.side) {
       const c = B.cardDef(fx.id);
-      if (c) this.showBanner(`Rakip kart seçti: ${c.icon} ${c.name}`, 'warn');
+      if (c) this.showBanner(t('banner.foeCard', { icon: c.icon, name: cardName(c.id) }), 'warn');
     } else if (fx.t === 'cmd') {
       const mine = fx.side === this.side;
-      if (fx.k === 'die') this.showBanner(mine ? `Komutanın düştü! ${B.CMD_RESPAWN} sn sonra döner` : 'Rakip komutanı düşürdün!', mine ? 'warn' : 'good');
-      else if (fx.k === 'level' && mine) this.showBanner(`Komutan seviye ${fx.lvl}!`, 'good');
+      if (fx.k === 'die') this.showBanner(mine ? t('banner.cmdDown', { n: B.CMD_RESPAWN }) : t('banner.cmdKill'), mine ? 'warn' : 'good');
+      else if (fx.k === 'level' && mine) this.showBanner(t('banner.cmdLevel', { n: fx.lvl ?? 1 }), 'good');
     }
   }
 
@@ -620,22 +648,22 @@ export class Hud {
   }
 
   private updatePicker(me: IPlayer, playing: boolean) {
-    const t = me.turrets.at(this.pickerSlot);
-    if (!t || !playing) return this.closePicker();
-    const refund = t.tier >= 0 ? B.turretDef(t.tier, t.grade).cost * B.TURRET_REFUND : 0;
-    setText(this.pickerTitle, t.tier < 0 ? `Kule kur · ${B.TIERS[me.tier].name}` : `Kuleyi değiştir · ${B.TIERS[me.tier].name}`);
+    const slot = me.turrets.at(this.pickerSlot);
+    if (!slot || !playing) return this.closePicker();
+    const refund = slot.tier >= 0 ? B.turretDef(slot.tier, slot.grade).cost * B.TURRET_REFUND : 0;
+    setText(this.pickerTitle, t(slot.tier < 0 ? 'hud.pickerBuild' : 'hud.pickerChange', { tier: tierName(me.tier) }));
     for (let g = 0; g < B.TURRET_GRADE_COUNT; g++) {
       const o = this.pickerOpts[g];
       const def = B.turretDef(me.tier, g);
       const src = this.icons.turrets[me.tier][g];
       if (o.img.getAttribute('src') !== src) o.img.src = src;
-      setText(o.name, def.name);
-      setText(o.grade, def.label);
-      setText(o.desc, def.desc);
-      setText(o.stats, `Hasar ${def.dmg} · Menzil ${def.range} · ${(1 / def.cd).toFixed(1)} atış/sn`);
-      const same = t.tier === me.tier && t.grade === g;
+      setText(o.name, turretName(me.tier, g));
+      setText(o.grade, gradeName(g));
+      setText(o.desc, turretDesc(def));
+      setText(o.stats, t('hud.pickerStats', { dmg: def.dmg, range: def.range, rate: fmtDec(1 / def.cd, 1) }));
+      const same = slot.tier === me.tier && slot.grade === g;
       const price = Math.max(0, Math.ceil(def.cost - refund));
-      setText(o.cost, same ? 'Kurulu' : t.tier >= 0 ? `${price}` : `${def.cost}`);
+      setText(o.cost, same ? t('hud.pickerBuilt') : slot.tier >= 0 ? `${price}` : `${def.cost}`);
       o.btn.disabled = same || me.gold < price;
       setClass(o.btn, 'current', same);
     }
@@ -654,7 +682,7 @@ export class Hud {
     const s = this.state();
     if (s?.st.mode === 'tutorial') return this.skipTutorial();
     const active = s && (s.st.phase === 'playing' || s.st.phase === 'countdown');
-    if (active && !window.confirm('Maçtan çıkarsan yenilmiş sayılırsın. Emin misin?')) return;
+    if (active && !window.confirm(t('hud.leaveConfirm'))) return;
     this.onLeave();
   }
 
@@ -690,15 +718,15 @@ export class Hud {
     // süre + Yıkım Saati
     const siege = st.time > B.SIEGE_TIME;
     if (siege) {
-      setText(this.timerEl, `${fmtTime(st.time)} · ⚠ Yıkım ×${B.siegeMult(st.time).toFixed(1)}`);
-      this.timerEl.title = 'Yıkım Saati: kaleler ve karakollar her saniye canlarının bir kısmını kaybeder, yapılara verilen hasar her dakika artar.';
+      setText(this.timerEl, t('hud.timerDoom', { time: fmtTime(st.time), x: fmtDec(B.siegeMult(st.time), 1) }));
+      this.timerEl.title = t('hud.timerDoomTitle');
     } else {
       const left = B.SIEGE_TIME - st.time;
-      setText(this.timerEl, left < 60 && st.phase === 'playing' ? `${fmtTime(st.time)} · Yıkım ${Math.ceil(left)} sn` : fmtTime(st.time));
-      this.timerEl.title = `${fmtTime(B.SIEGE_TIME)} sonra Yıkım Saati başlar: maç uzarsa kaleler çökmeye başlar.`;
+      setText(this.timerEl, left < 60 && st.phase === 'playing' ? t('hud.timerSoon', { time: fmtTime(st.time), n: Math.ceil(left) }) : fmtTime(st.time));
+      this.timerEl.title = t('hud.timerTitle', { time: fmtTime(B.SIEGE_TIME) });
     }
     setClass(this.timerEl, 'siege', siege || B.SIEGE_TIME - st.time < 60);
-    if (siege && !this.lastSiege && st.phase === 'playing') this.showBanner('⚠ Yıkım Saati başladı: kaleler çöküyor!', 'warn');
+    if (siege && !this.lastSiege && st.phase === 'playing') this.showBanner(t('banner.doom'), 'warn');
     this.lastSiege = siege;
     // gerilim müziği: kalelerden biri düşmek üzereyken ya da Yıkım Saati'nde
     const hpFrac = (p?: IPlayer) => (p && p.baseMaxHp > 0 ? p.baseHp / p.baseMaxHp : 1);
@@ -708,17 +736,17 @@ export class Hud {
     if (src && st.phase === 'playing' && st.mode !== 'tutorial') {
       if (src.active) {
         const info = B.SOURCE_KINDS[src.kind as B.SourceKind];
-        const who = src.cap > 0 ? (src.capSide === this.side ? ` · senin %${Math.round(src.cap * 100)}` : ` · rakip %${Math.round(src.cap * 100)}`) : '';
-        setText(this.srcEl, `${info?.icon ?? ''} ${info?.name ?? ''}${who}`);
+        const who = src.cap > 0 ? t(src.capSide === this.side ? 'hud.srcMine' : 'hud.srcFoe', { p: fmtPct(src.cap * 100) }) : '';
+        setText(this.srcEl, `${info?.icon ?? ''} ${info ? sourceName(src.kind) : ''}${who}`);
         this.srcEl.dataset.state = src.cap > 0 ? (src.capSide === this.side ? 'mine' : 'foe') : 'open';
-        this.srcEl.title = `${info?.name}: ${info?.desc}. Alanında ${B.SOURCE_TIME} sn sadece senin birimlerin durursa ödül senin.`;
+        this.srcEl.title = t('hud.srcInfoTitle', { name: sourceName(src.kind), desc: sourceDesc(src.kind), n: B.SOURCE_TIME });
       } else {
-        setText(this.srcEl, `Eter Kaynağı ${fmtTime(src.next)}`);
+        setText(this.srcEl, t('hud.srcNext', { time: fmtTime(src.next) }));
         this.srcEl.dataset.state = 'wait';
       }
     } else setText(this.srcEl, '');
     setClass(this.furyEl, 'hidden', !(me.furyT > 0));
-    if (me.furyT > 0) setText(this.furyEl, `🔥 Öfke ${Math.ceil(me.furyT)}`);
+    if (me.furyT > 0) setText(this.furyEl, t('hud.fury', { n: Math.ceil(me.furyT) }));
     this.renderOffer(me, playing);
 
     // kaynaklar
@@ -728,7 +756,7 @@ export class Hud {
     const income = B.TIERS[me.tier].income * (1 + ownedOps * B.OUTPOST_INCOME) * mods.income;
     this.goldTarget = gold;
     if (this.goldShown < 0 || gold < this.goldShown) this.goldShown = gold; // harcama anında düşer
-    setText(this.incomeEl, `+${Math.round(income * 10) / 10}/sn`);
+    setText(this.incomeEl, t('hud.income', { n: Math.round(income * 10) / 10 }));
 
     // karakol noktaları
     for (let s = 0; s < this.opEls.length; s++) {
@@ -743,34 +771,34 @@ export class Hud {
         continue;
       }
       let cls = 'neutral';
-      let text = 'Tarafsız';
+      let text = t('hud.opNeutral');
       let enabled = false;
       if (o.owner < 0) {
         if (o.cap > 0) {
           cls = o.capSide === this.side ? 'capmine' : 'capfoe';
-          text = `%${Math.round(o.cap * 100)}`;
+          text = fmtPct(o.cap * 100);
         }
       } else if (o.owner === this.side) {
         cls = 'mine';
         if (!o.built) {
           const c = B.TIERS[me.tier].outpost.cost;
-          text = `Kur ${fmtNum(c)}`;
+          text = t('hud.opBuild', { n: fmtNum(c) });
           enabled = playing && gold >= c;
         } else if (o.tier < me.tier) {
           const c = B.outpostUpgradeCost(o.tier, me.tier);
-          text = `Yükselt ${fmtNum(c)}`;
+          text = t('hud.opUpgrade', { n: fmtNum(c) });
           enabled = playing && gold >= c;
         } else if (!o.armed) {
           // karakol silahsız kurulur; üstüne kule ayrıca eklenir
           const c = B.TIERS[o.tier].outpost.armCost;
-          text = `Kule ekle ${fmtNum(c)}`;
+          text = t('hud.opArm', { n: fmtNum(c) });
           enabled = playing && gold >= c;
         } else {
-          text = `▲ %${Math.round((o.hp / o.maxHp) * 100)}`;
+          text = `▲ ${fmtPct((o.hp / o.maxHp) * 100)}`;
         }
       } else {
         cls = 'foe';
-        text = o.built ? `▲ %${Math.round((o.hp / o.maxHp) * 100)}` : 'Düşman';
+        text = o.built ? `▲ ${fmtPct((o.hp / o.maxHp) * 100)}` : t('hud.opEnemy');
       }
       setText(el.label, text);
       if (el.btn.dataset.state !== cls) el.btn.dataset.state = cls;
@@ -782,7 +810,7 @@ export class Hud {
     st.units.forEach((u) => (u.side === this.side ? mine++ : enemies++));
     if (mine !== this.lastCount) {
       this.lastCount = mine;
-      setText(this.countEl, `Ordu ${mine}/${B.MAX_UNITS_PER_SIDE}`);
+      setText(this.countEl, t('hud.army', { n: mine, max: B.MAX_UNITS_PER_SIDE }));
     }
 
     // birim butonları
@@ -801,10 +829,10 @@ export class Hud {
     if (cmdAlive) {
       const u = cmdAlive;
       this.cmdFill.style.width = `${Math.max(0, Math.min(1, u.hp / u.maxHp)) * 100}%`;
-      setText(this.cmdLabel, `Komutan Sv${me.cmdLvl}`);
+      setText(this.cmdLabel, t('hud.cmdLevel', { n: me.cmdLvl }));
     } else {
       this.cmdFill.style.width = '0%';
-      setText(this.cmdLabel, st.phase === 'playing' ? `Döner: ${Math.ceil(me.cmdRespawn)}` : 'Komutan');
+      setText(this.cmdLabel, st.phase === 'playing' ? t('hud.cmdBack', { n: Math.ceil(me.cmdRespawn) }) : t('hud.cmd'));
     }
     const ccd = me.cmdCd;
     const cmax = B.CMD_SKILL_CD * mods.cmdCd;
@@ -835,35 +863,36 @@ export class Hud {
     const cheapest = B.turretDef(me.tier, 0).cost;
     for (let i = 0; i < B.MAX_SLOTS; i++) {
       const se = this.slotEls[i];
-      const t = me.turrets.at(i);
+      const slot = me.turrets.at(i);
       let state = 'hidden';
-      if (!t) {
+      if (!slot) {
         if (i === me.turrets.length) {
           state = 'locked';
           const cost = B.SLOT_COSTS[i];
-          setText(se.label, 'Yuva aç');
+          this.slotLabel(se, t('hud.slotUnlock'));
           setText(se.cost, `${cost}`);
           se.main.disabled = !playing || gold < cost;
           se.img.removeAttribute('src');
         }
-      } else if (t.tier < 0) {
+      } else if (slot.tier < 0) {
         state = 'empty';
-        setText(se.label, 'Kule kur');
+        this.slotLabel(se, t('hud.slotBuild'));
         setText(se.cost, `${cheapest}+`);
         se.main.disabled = !playing || gold < cheapest;
         const src = this.icons.turrets[me.tier][1];
         if (se.img.getAttribute('src') !== src) se.img.src = src;
       } else {
-        const def = B.turretDef(t.tier, t.grade);
-        const outdated = t.tier < me.tier;
+        const def = B.turretDef(slot.tier, slot.grade);
+        const outdated = slot.tier < me.tier;
         state = outdated ? 'outdated' : 'built';
-        const src = this.icons.turrets[t.tier][t.grade];
+        const src = this.icons.turrets[slot.tier][slot.grade];
         if (se.img.getAttribute('src') !== src) se.img.src = src;
-        setText(se.label, outdated ? 'Yükselt' : def.name);
-        setText(se.cost, outdated ? '↑' : def.label);
+        const name = turretName(slot.tier, slot.grade);
+        this.slotLabel(se, outdated ? t('hud.slotUpgrade') : name);
+        setText(se.cost, outdated ? '↑' : gradeName(slot.grade));
         se.main.disabled = !playing;
-        se.main.title = `${def.name} (${def.label}): ${def.desc}`;
-        setText(se.sell, `Sat +${Math.floor(def.cost * B.TURRET_REFUND)}`);
+        se.main.title = `${name} (${gradeName(slot.grade)}): ${turretDesc(def)}`;
+        setText(se.sell, t('hud.sellFor', { n: Math.floor(def.cost * B.TURRET_REFUND) }));
         se.sell.disabled = !playing;
       }
       if (se.el.dataset.state !== state) se.el.dataset.state = state;
@@ -873,13 +902,11 @@ export class Hud {
     // duruş
     const hold = me.stance === 'hold';
     setText(this.stanceIcon, hold ? '🛡' : '⚔');
-    setText(this.stanceLabel, hold ? 'Savun' : 'Hücum');
-    setText(this.stanceHint, hold ? 'Kale önünde toplan' : 'İleri, saldır!');
+    setText(this.stanceLabel, t(hold ? 'hud.hold' : 'hud.attack'));
+    setText(this.stanceHint, t(hold ? 'hud.holdHint' : 'hud.attackHint'));
     setClass(this.stanceBtn, 'hold', hold);
     this.stanceBtn.disabled = !(st.phase === 'playing' || st.phase === 'countdown');
-    this.stanceBtn.title = hold
-      ? 'Ordu kale önünde, kulelerin menzilinde toplanıyor. Hücuma geçmek için tıkla (S).'
-      : 'Ordu ilerleyip saldırıyor. Geri çekilip toplanmak için tıkla (S).';
+    this.stanceBtn.title = t(hold ? 'hud.holdTitle' : 'hud.attackTitle');
 
     // özel güç
     const cd = me.specialCd;
@@ -892,7 +919,7 @@ export class Hud {
 
     // kademe
     if (me.tier >= B.MAX_TIER) {
-      setText(this.evolveLabel, 'Son kademe');
+      setText(this.evolveLabel, t('hud.evolveMax'));
       setText(this.evolveXp, `${fmtNum(me.xp)} XP`);
       this.evolveFill.style.width = '100%';
       this.evolveBtn.disabled = true;
@@ -901,7 +928,7 @@ export class Hud {
       const next = B.TIERS[me.tier + 1];
       const prev = B.TIERS[me.tier].xpToReach;
       const k = Math.min(1, (me.xp - prev) / (next.xpToReach - prev));
-      setText(this.evolveLabel, `${next.name} kademesi`);
+      setText(this.evolveLabel, t('hud.evolveNext', { tier: tierName(me.tier + 1) }));
       setText(this.evolveXp, `${fmtNum(me.xp)} / ${fmtNum(next.xpToReach)} XP`);
       this.evolveFill.style.width = `${Math.max(0, k) * 100}%`;
       const ready = me.xp >= next.xpToReach;
@@ -910,6 +937,19 @@ export class Hud {
     }
 
     this.updateOnboarding(st, me, playing);
+  }
+
+  /** Kule yuvası etiketi: değişince yazar ve yuvaya sığdırır. */
+  private slotLabel(se: { label: HTMLElement; main: HTMLElement }, text: string) {
+    if (se.label.textContent === text) return;
+    se.label.textContent = text;
+    fitText(se.label, se.main.clientWidth - 6);
+  }
+
+  /** Birim adlarını ve kule etiketlerini yeniden sığdırır (boyut / yazı tipi değişince). */
+  private refitLabels() {
+    for (const arch of B.ARCHES) fitText(this.unitBtns[arch].name, this.unitBtns[arch].btn.clientWidth - 8);
+    for (const se of this.slotEls) fitText(se.label, se.main.clientWidth - 6);
   }
 
   /** Altın sayacı hedefe doğru sayar (kazanınca), harcayınca anında düşer. */
@@ -1025,10 +1065,10 @@ export class Hud {
       if (key !== this.coachKey) {
         this.coachKey = key;
         setText(this.coach.step, `${st.tut + 1}/${TUTORIAL.length}`);
-        setText(this.coach.title, step.title);
-        setText(this.coach.text, step.text);
+        setText(this.coach.title, tutTitle(step.id));
+        setText(this.coach.text, tutText(step.id));
         setClass(this.coach.next, 'hidden', !step.button);
-        if (step.button) setText(this.coach.next, step.button);
+        if (step.button) setText(this.coach.next, tutButton(step.id));
         this.coach.el.classList.remove('pop');
         void this.coach.el.offsetWidth; // animasyonu yeniden başlat
         this.coach.el.classList.add('pop');
@@ -1056,7 +1096,7 @@ export class Hud {
         this.tipId = id;
         this.tipUntil = now + 8000;
         this.tipGap = now + 25000;
-        setText(this.tipBox.text, tip.text);
+        setText(this.tipBox.text, tipText(id));
         this.tipBox.el.classList.remove('hidden');
       }
     }
@@ -1067,8 +1107,8 @@ export class Hud {
   }
 
   private fillCard(card: SideCard, p: IPlayer) {
-    setText(card.name, p.name + (p.isBot ? ' 🤖' : '') + (!p.connected && !p.isBot ? ' (bağlantı yok)' : ''));
-    setText(card.tier, B.TIERS[p.tier].name);
+    setText(card.name, playerName(p) + (p.isBot ? ' 🤖' : '') + (!p.connected && !p.isBot ? t('hud.offline') : ''));
+    setText(card.tier, tierName(p.tier));
     card.tier.dataset.tier = String(p.tier);
     const k = p.baseMaxHp > 0 ? Math.max(0, p.baseHp / p.baseMaxHp) : 0;
     card.fill.style.width = `${k * 100}%`;
@@ -1081,20 +1121,22 @@ export class Hud {
       const def = B.unitDef(tier, arch);
       const ub = this.unitBtns[arch];
       ub.img.src = this.icons.units[tier][arch];
-      setText(ub.name, def.name);
+      const name = unitName(tier, arch);
+      setText(ub.name, name);
+      fitText(ub.name, ub.btn.clientWidth - 8);
       setText(ub.cost, String(def.cost));
-      const strong = B.ARCH_LABEL[B.STRONG_AGAINST[arch]];
-      const weak = B.ARCH_LABEL[B.COUNTERED_BY[arch]];
+      const reach = arch === 'ranged' ? t('hud.unitRange', { n: def.range }) : t('hud.unitMelee');
       ub.tip.innerHTML =
-        `<b>${def.name}</b> <i>${B.ARCH_LABEL[arch]}</i><br>` +
-        `Can ${def.hp} · Hasar ${def.dmg} · ${arch === 'ranged' ? 'Menzil ' + def.range : 'Yakın'}<br>` +
-        `Hız ${def.speed} · Üretim ${def.train} sn<br>` +
-        `<span class="ab">✦ ${def.ability.name}:</span> ${def.ability.desc}<br>` +
-        `<span class="good">Güçlü: ${strong}</span> · <span class="bad">Zayıf: ${weak}</span>`;
+        `<b>${name}</b> <i>${archName(arch)}</i><br>` +
+        `${t('hud.unitStats', { hp: def.hp, dmg: def.dmg, reach })}<br>` +
+        `${t('hud.unitSpeed', { speed: def.speed, train: def.train })}<br>` +
+        `<span class="ab">✦ ${abilityName(tier, arch)}:</span> ${abilityDesc(tier, arch)}<br>` +
+        `<span class="good">${t('hud.strong', { a: archName(B.STRONG_AGAINST[arch]) })}</span> · ` +
+        `<span class="bad">${t('hud.weak', { a: archName(B.COUNTERED_BY[arch]) })}</span>`;
     }
     this.specialImg.src = this.icons.specials[tier];
-    setText(this.specialName, B.TIERS[tier].special.name);
-    this.specialBtn.title = `${B.TIERS[tier].special.name}: düşmanın ön saflarına ${B.TIERS[tier].special.damage} hasar`;
+    setText(this.specialName, specialName(tier));
+    this.specialBtn.title = t('hud.specialTitle', { name: specialName(tier), n: B.TIERS[tier].special.damage });
   }
 
   // ── ekranlar (bekleme / geri sayım / bitiş) ──────────────
@@ -1113,7 +1155,7 @@ export class Hud {
       else if (phase === 'countdown' || (phase === 'playing' && this.lastPhase !== 'countdown')) music.battle(true);
       if (phase === 'playing' && this.lastPhase === 'countdown') {
         sfx.countdown(true);
-        this.showBanner('Savaş başladı!', 'good');
+        this.showBanner(t('banner.start'), 'good');
       }
       this.lastPhase = phase;
     }
@@ -1132,30 +1174,30 @@ export class Hud {
 
     if (phase === 'waiting') {
       if (st.mode === 'private') {
-        const link = `${location.origin}${location.pathname}?oda=${st.code}`;
+        const link = `${location.origin}${location.pathname}?room=${st.code}`;
         o.append(
           h(
             'div',
             { class: 'panel' },
-            h('h2', { text: 'Rakip bekleniyor' }),
-            h('p', { text: 'Arkadaşın bu kodla katılabilir:' }),
+            h('h2', { text: t('screen.waitTitle') }),
+            h('p', { text: t('screen.waitCode') }),
             h('div', { class: 'bigcode', text: st.code }),
             h(
               'div',
               { class: 'row' },
               h('button', {
                 class: 'btn primary',
-                text: 'Davet linkini kopyala',
+                text: t('screen.copyLink'),
                 onclick: () => {
                   void navigator.clipboard?.writeText(link).then(
-                    () => toast('Link kopyalandı', 'good'),
+                    () => toast(t('screen.linkCopied'), 'good'),
                     () => toast(link),
                   );
                 },
               }),
-              h('button', { class: 'btn', text: 'Vazgeç', onclick: () => this.onLeave() }),
+              h('button', { class: 'btn', text: t('screen.cancel'), onclick: () => this.onLeave() }),
             ),
-            h('p', { class: 'hint', text: 'Aynı Wi-Fi ağındaysanız, arkadaşın bu bilgisayarın yerel IP adresiyle oyunu açmalı.' }),
+            h('p', { class: 'hint', text: t('screen.lanHint') }),
           ),
         );
       } else {
@@ -1164,9 +1206,9 @@ export class Hud {
             'div',
             { class: 'panel' },
             h('div', { class: 'spinner' }),
-            h('h2', { text: 'Rakip aranıyor…' }),
-            h('p', { text: 'Başka bir oyuncu Hızlı Eşleşme\'ye girince maç başlar.' }),
-            h('button', { class: 'btn', text: 'Vazgeç', onclick: () => this.onLeave() }),
+            h('h2', { text: t('screen.searching') }),
+            h('p', { text: t('screen.searchingText') }),
+            h('button', { class: 'btn', text: t('screen.cancel'), onclick: () => this.onLeave() }),
           ),
         );
       }
@@ -1177,7 +1219,7 @@ export class Hud {
       if (n > 0 && prevKey !== key) sfx.countdown();
     } else if (phase === 'playing') {
       if (st.paused) {
-        o.append(h('div', { class: 'panel small' }, h('div', { class: 'spinner' }), h('h3', { text: 'Rakibin bağlantısı koptu' }), h('p', { text: `En fazla ${B.RECONNECT_S} sn bekleniyor…` })));
+        o.append(h('div', { class: 'panel small' }, h('div', { class: 'spinner' }), h('h3', { text: t('screen.pausedTitle') }), h('p', { text: t('screen.pausedText', { n: B.RECONNECT_S }) })));
       } else {
         o.classList.add('hidden');
       }
@@ -1188,52 +1230,48 @@ export class Hud {
         h(
           'div',
           { class: `panel result ${won ? 'won' : 'lost'}` },
-          h('h1', { text: won ? 'EĞİTİM TAMAM!' : 'Eğitim bitti' }),
-          h('p', {
-            text: won
-              ? 'Artık hazırsın! Şimdi kolay bota karşı gerçek bir maç dene. Maç sırasında yeni bir durumla karşılaşınca kısa ipuçları çıkacak.'
-              : 'İstersen eğitimi ana menüden tekrar oynayabilirsin.',
-          }),
+          h('h1', { text: t(won ? 'screen.tutWon' : 'screen.tutLost') }),
+          h('p', { text: t(won ? 'screen.tutWonText' : 'screen.tutLostText') }),
           h(
             'div',
             { class: 'row' },
-            h('button', { class: 'btn primary', text: 'Bota Karşı Oyna', onclick: () => this.onPlayBot() }),
-            h('button', { class: 'btn', text: 'Ana menü', onclick: () => this.onLeave() }),
+            h('button', { class: 'btn primary', text: t('menu.bot'), onclick: () => this.onPlayBot() }),
+            h('button', { class: 'btn', text: t('screen.mainMenu'), onclick: () => this.onLeave() }),
           ),
         ),
       );
     } else if (phase === 'ended') {
       const won = st.winner === this.side;
-      const reason = st.reason === 'forfeit' ? (won ? 'Rakip oyunu terk etti.' : 'Oyunu terk ettin.') : won ? 'Rakip kaleyi yıktın!' : 'Kalen yıkıldı.';
+      const reason = t(st.reason === 'forfeit' ? (won ? 'screen.foeQuit' : 'screen.youQuit') : won ? 'screen.castleWon' : 'screen.castleLost');
       const row = (label: string, a: string | number, b: string | number) =>
         h('tr', {}, h('td', { text: String(a) }), h('th', { text: label }), h('td', { text: String(b) }));
       const rematchBtn = h('button', {
         class: 'btn primary',
-        text: me.wantsRematch ? 'Rakip bekleniyor…' : 'Rövanş',
+        text: t(me.wantsRematch ? 'screen.rematchWaiting' : 'screen.rematch'),
         onclick: () => this.send('rematch'),
       });
       rematchBtn.disabled = me.wantsRematch || !foe || foe.left;
-      if (foe?.left) rematchBtn.textContent = 'Rakip ayrıldı';
+      if (foe?.left) rematchBtn.textContent = t('screen.foeLeft');
       o.append(
         h(
           'div',
           { class: `panel result ${won ? 'won' : 'lost'}` },
-          h('h1', { text: won ? 'ZAFER!' : 'YENİLGİ' }),
+          h('h1', { text: t(won ? 'screen.victory' : 'screen.defeat') }),
           h('p', { text: reason }),
           h(
             'table',
             { class: 'stats' },
-            h('tr', {}, h('td', { class: 'me', text: me.name }), h('th', { text: '' }), h('td', { class: 'foe', text: foe?.name ?? '—' })),
-            row('Kademe', B.TIERS[me.tier].name, foe ? B.TIERS[foe.tier].name : '—'),
-            row('Öldürülen', me.kills, foe?.kills ?? 0),
-            row('Komutan', `Sv${me.cmdLvl}`, foe ? `Sv${foe.cmdLvl}` : '—'),
-            row('Kartlar', cardIcons(me), foe ? cardIcons(foe) : '—'),
-            row('Üretilen', me.trained, foe?.trained ?? 0),
-            row('Kazanılan altın', me.goldEarned, foe?.goldEarned ?? 0),
-            row('Süre', fmtTime(st.time), ''),
+            h('tr', {}, h('td', { class: 'me', text: playerName(me) }), h('th', { text: '' }), h('td', { class: 'foe', text: foe ? playerName(foe) : '—' })),
+            row(t('stats.age'), tierName(me.tier), foe ? tierName(foe.tier) : '—'),
+            row(t('stats.kills'), me.kills, foe?.kills ?? 0),
+            row(t('stats.commander'), t('cmd.lvl', { n: me.cmdLvl }), foe ? t('cmd.lvl', { n: foe.cmdLvl }) : '—'),
+            row(t('stats.cards'), cardIcons(me), foe ? cardIcons(foe) : '—'),
+            row(t('stats.trained'), me.trained, foe?.trained ?? 0),
+            row(t('stats.gold'), me.goldEarned, foe?.goldEarned ?? 0),
+            row(t('stats.time'), fmtTime(st.time), ''),
           ),
-          foe?.wantsRematch && !me.wantsRematch ? h('p', { class: 'hint good', text: 'Rakip rövanş istiyor!' }) : null,
-          h('div', { class: 'row' }, rematchBtn, h('button', { class: 'btn', text: 'Ana menü', onclick: () => this.onLeave() })),
+          foe?.wantsRematch && !me.wantsRematch ? h('p', { class: 'hint good', text: t('screen.foeWantsRematch') }) : null,
+          h('div', { class: 'row' }, rematchBtn, h('button', { class: 'btn', text: t('screen.mainMenu'), onclick: () => this.onLeave() })),
         ),
       );
     }

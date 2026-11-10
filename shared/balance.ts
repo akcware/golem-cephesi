@@ -1,6 +1,7 @@
 // ─────────────────────────────────────────────────────────────
-//  GOLEM CEPHESİ — tüm denge değerleri tek yerde.
+//  GOLEM FORGE — tüm denge değerleri tek yerde.
 //  Sunucu (simülasyon), bot ve istemci (arayüz) bu dosyayı paylaşır.
+//  Oyuncuya görünen adlar ve açıklamalar burada değil, shared/i18n'de (id'lerle eşlenir).
 //  Oyunu dengelemek için genelde sadece burayı değiştirmek yeterli.
 // ─────────────────────────────────────────────────────────────
 
@@ -40,9 +41,9 @@ export const TURRET_REFUND = 0.5;
 
 /** Her kademede 3 kule derecesi: Hafif (ucuz, seri, kısa menzil), Orta (dengeli), Ağır (pahalı, güçlü, uzun menzil). */
 export const TURRET_GRADES = [
-  { label: 'Hafif', costMult: 0.55, dmgMult: 0.4, cd: 0.55, range: 300 },
-  { label: 'Orta', costMult: 1, dmgMult: 1, cd: 1.1, range: 360 },
-  { label: 'Ağır', costMult: 2, dmgMult: 2, cd: 1.7, range: 440 },
+  { costMult: 0.55, dmgMult: 0.4, cd: 0.55, range: 300 },
+  { costMult: 1, dmgMult: 1, cd: 1.1, range: 360 },
+  { costMult: 2, dmgMult: 2, cd: 1.7, range: 440 },
 ] as const;
 export const TURRET_GRADE_COUNT = TURRET_GRADES.length;
 
@@ -68,7 +69,6 @@ export const CHAIN_FALLOFF = 0.75;
 export const SLOW_FACTOR = 0.5;
 
 interface TurretSpec {
-  name: string;
   kind: TurretKind;
   dmgK?: number; // türün etkisine göre hasar düzeltmesi
   splash?: number;
@@ -116,12 +116,6 @@ const COST_GROWTH = 2.4; // her kademede maliyet çarpanı
 
 export type Arch = 'melee' | 'ranged' | 'heavy';
 export const ARCHES: Arch[] = ['melee', 'ranged', 'heavy'];
-
-export const ARCH_LABEL: Record<Arch, string> = {
-  melee: 'Yakın dövüş',
-  ranged: 'Menzilli',
-  heavy: 'Ağır',
-};
 
 /** Hasar çarpanı: COUNTER[saldıran][savunan]. Taş-kağıt-makas. */
 export const COUNTER: Record<Arch, Record<Arch, number>> = {
@@ -181,9 +175,8 @@ export interface AbilityParams {
   aura?: { r: number; bonus: number }; // çevresindeki dostlara hasar bonusu
 }
 
+/** Yeteneğin adı ve açıklaması shared/i18n'de: ability.<kademe>.<tür>. */
 export interface AbilityDef {
-  name: string;
-  desc: string;
   p: AbilityParams;
 }
 
@@ -192,13 +185,13 @@ export const CHARGE_REARM = 1.5;
 /** Birim zincir şimşeğinin sıçrama mesafesi. */
 export const UNIT_CHAIN_RANGE = 90;
 
+export type TierKey = 'wood' | 'bronze' | 'iron' | 'crystal' | 'aether';
+
 interface TierInfo {
-  key: string;
-  name: string;
+  /** Çeviri anahtarlarında kullanılır: tier.<key>, unit.<key>.melee, turret.<key>.0 … */
+  key: TierKey;
   xpToReach: number;
-  units: Record<Arch, string>;
   abilities: Record<Arch, AbilityDef>;
-  special: string;
   /** [Hafif, Orta, Ağır] */
   turrets: [TurretSpec, TurretSpec, TurretSpec];
   palette: Palette;
@@ -207,98 +200,82 @@ interface TierInfo {
 const TIER_INFO: TierInfo[] = [
   {
     key: 'wood',
-    name: 'Ahşap',
     xpToReach: 0,
-    units: { melee: 'Kütük Muhafız', ranged: 'Söğüt Okçu', heavy: 'Meşe Golem' },
     abilities: {
-      melee: { name: 'Kök Salma', desc: 'Savaşmıyorken saniyede canının %4\'ünü yeniler', p: { regen: 0.04 } },
-      ranged: { name: 'Seri Atış', desc: 'İlk 3 okunu çok hızlı atar', p: { rapid: 3 } },
-      heavy: { name: 'Fidan', desc: 'Ölünce yakındaki dostlarını canlarının %35\'i kadar iyileştirir', p: { deathHeal: { r: 130, pct: 0.35 } } },
+      melee: { p: { regen: 0.04 } },
+      ranged: { p: { rapid: 3 } },
+      heavy: { p: { deathHeal: { r: 130, pct: 0.35 } } },
     },
-    special: 'Kozalak Yağmuru',
     turrets: [
-      { name: 'Ok Kulesi', kind: 'shot' },
-      { name: 'Kozalak Mancınığı', kind: 'lob', splash: 40, dmgK: 0.85 },
-      { name: 'Kütük Katapultu', kind: 'lob', splash: 65, dmgK: 0.9 },
+      { kind: 'shot' },
+      { kind: 'lob', splash: 40, dmgK: 0.85 },
+      { kind: 'lob', splash: 65, dmgK: 0.9 },
     ],
     palette: { main: 0xa0703c, dark: 0x5e3a1c, light: 0xd2a066, glow: 0x8fd16a },
   },
   {
     key: 'bronze',
-    name: 'Bronz',
     xpToReach: 900,
-    units: { melee: 'Bronz Muhafız', ranged: 'Bronz Arbaletçi', heavy: 'Bronz Boğa' },
     abilities: {
-      melee: { name: 'Kalkan', desc: 'Menzilli saldırıların %35\'ini bloklar', p: { block: 0.35 } },
-      ranged: { name: 'Zırh Delici', desc: 'Kalkan ve zırhı yok sayar, ağırlara +%25 hasar', p: { pierceArmor: true, heavyBonus: 0.25 } },
-      heavy: { name: 'Boğa Hücumu', desc: 'Çatışmaya girerken 2 kat vurur ve hedefi geri iter', p: { charge: { mult: 2, knock: 40 } } },
+      melee: { p: { block: 0.35 } },
+      ranged: { p: { pierceArmor: true, heavyBonus: 0.25 } },
+      heavy: { p: { charge: { mult: 2, knock: 40 } } },
     },
-    special: 'Erimiş Bronz',
     turrets: [
-      { name: 'Bronz Yay', kind: 'shot' },
-      { name: 'Bronz Balista', kind: 'pierce', pierce: 3, dmgK: 0.8 },
-      { name: 'Ateş Kazanı', kind: 'fire', splash: 60, dmgK: 0.5, burn: { dps: 0.6, dur: 3 } },
+      { kind: 'shot' },
+      { kind: 'pierce', pierce: 3, dmgK: 0.8 },
+      { kind: 'fire', splash: 60, dmgK: 0.5, burn: { dps: 0.6, dur: 3 } },
     ],
     palette: { main: 0xc8782e, dark: 0x7a4515, light: 0xf0b060, glow: 0xffc65a },
   },
   {
     key: 'iron',
-    name: 'Demir',
     xpToReach: 3200,
-    units: { melee: 'Demir Şövalye', ranged: 'Demir Topçu', heavy: 'Demir Dev' },
     abilities: {
-      melee: { name: 'Ağır Zırh', desc: 'Yakın dövüş saldırılarından %25 az hasar alır', p: { armor: 0.25 } },
-      ranged: { name: 'Top Güllesi', desc: 'Hedefin çevresindekilere %50 alan hasarı verir', p: { splash: { r: 45, pct: 0.5 } } },
-      heavy: { name: 'Kuşatma Ustası', desc: 'Kalelere ve karakollara 2.5 kat hasar verir', p: { siege: 2.5 } },
+      melee: { p: { armor: 0.25 } },
+      ranged: { p: { splash: { r: 45, pct: 0.5 } } },
+      heavy: { p: { siege: 2.5 } },
     },
-    special: 'Gülle Yağmuru',
     turrets: [
-      { name: 'Tüfek Mazgalı', kind: 'shot' },
-      { name: 'Demir Top', kind: 'lob', splash: 40, dmgK: 0.85 },
-      { name: 'Havan Topu', kind: 'lob', splash: 75, dmgK: 0.9 },
+      { kind: 'shot' },
+      { kind: 'lob', splash: 40, dmgK: 0.85 },
+      { kind: 'lob', splash: 75, dmgK: 0.9 },
     ],
     palette: { main: 0x8c949e, dark: 0x4a5058, light: 0xd0d6dc, glow: 0xffb347 },
   },
   {
     key: 'crystal',
-    name: 'Kristal',
     xpToReach: 10000,
-    units: { melee: 'Kristal Kılıççı', ranged: 'Prizma Büyücü', heavy: 'Kuvars Golem' },
     abilities: {
-      melee: { name: 'Yansıtma', desc: 'Aldığı yakın dövüş hasarının %25\'ini saldırana geri vurur', p: { reflect: 0.25 } },
-      ranged: { name: 'Delici Işın', desc: 'Işını hattaki 2 düşmanı birden vurur', p: { pierce: 2 } },
-      heavy: { name: 'Buz Yumruğu', desc: 'Vurduğu düşmanı 1.5 sn yavaşlatır', p: { slowOnHit: 1.5 } },
+      melee: { p: { reflect: 0.25 } },
+      ranged: { p: { pierce: 2 } },
+      heavy: { p: { slowOnHit: 1.5 } },
     },
-    special: 'Kristal Sağanağı',
     turrets: [
-      { name: 'Kristal Diken', kind: 'frost', slow: 1.5, dmgK: 0.8 },
-      { name: 'Prizma Kulesi', kind: 'beam', pierce: 3, dmgK: 0.8 },
-      { name: 'Işın Merceği', kind: 'beam', pierce: 8, dmgK: 0.75 },
+      { kind: 'frost', slow: 1.5, dmgK: 0.8 },
+      { kind: 'beam', pierce: 3, dmgK: 0.8 },
+      { kind: 'beam', pierce: 8, dmgK: 0.75 },
     ],
     palette: { main: 0x4fc8e0, dark: 0x1f7088, light: 0xc4f6ff, glow: 0x9ef0ff },
   },
   {
     key: 'aether',
-    name: 'Eter',
     xpToReach: 30000,
-    units: { melee: 'Eter Bekçisi', ranged: 'Eter Gözü', heavy: 'Eter Titanı' },
     abilities: {
-      melee: { name: 'Ruh Bedeni', desc: 'İlk ölümünde %40 canla geri döner', p: { revive: 0.4 } },
-      ranged: { name: 'Zincir Şimşek', desc: 'Saldırısı yakındaki bir düşmana daha sıçrar (%60)', p: { chain: { pct: 0.6 } } },
-      heavy: { name: 'Komutan Aurası', desc: 'Yakınındaki dostlar %20 fazla hasar verir', p: { aura: { r: 140, bonus: 0.2 } } },
+      melee: { p: { revive: 0.4 } },
+      ranged: { p: { chain: { pct: 0.6 } } },
+      heavy: { p: { aura: { r: 140, bonus: 0.2 } } },
     },
-    special: 'Eter Fırtınası',
     turrets: [
-      { name: 'Eter Kıvılcımı', kind: 'chain', chain: 2, dmgK: 0.85 },
-      { name: 'Eter Kristali', kind: 'chain', chain: 3, dmgK: 0.85 },
-      { name: 'Yıldız Çekirdeği', kind: 'lob', splash: 85, slow: 1.2, dmgK: 0.85 },
+      { kind: 'chain', chain: 2, dmgK: 0.85 },
+      { kind: 'chain', chain: 3, dmgK: 0.85 },
+      { kind: 'lob', splash: 85, slow: 1.2, dmgK: 0.85 },
     ],
     palette: { main: 0x9a6cff, dark: 0x4b2a9e, light: 0xe6d8ff, glow: 0xffe07a },
   },
 ];
 
 export interface UnitDef extends ArchBase {
-  name: string;
   arch: Arch;
   tier: number;
   bounty: number;
@@ -308,28 +285,23 @@ export interface UnitDef extends ArchBase {
 
 export interface TierDef {
   index: number;
-  key: string;
-  name: string;
+  key: TierKey;
   xpToReach: number;
   baseHp: number;
   income: number; // pasif altın/sn
   palette: Palette;
   units: Record<Arch, UnitDef>;
-  special: { name: string; damage: number };
+  special: { damage: number };
   /** [Hafif, Orta, Ağır] */
   turrets: TurretDef[];
-  /** İleri karakol (bu kademede kurulursa) */
   /** İleri karakol (bu kademede kurulursa). armCost: üstüne kule (silah) ekleme bedeli */
   outpost: { cost: number; hp: number; armCost: number };
 }
 
 export interface TurretDef {
-  name: string;
   tier: number;
-  grade: number;
-  label: string; // Hafif / Orta / Ağır
+  grade: number; // 0 Hafif, 1 Orta, 2 Ağır
   kind: TurretKind;
-  desc: string; // oyuncuya gösterilen kısa açıklama
   cost: number;
   dmg: number;
   range: number;
@@ -340,25 +312,6 @@ export interface TurretDef {
   slow: number; // yavaşlatma süresi (sn)
   burnDps: number; // yanan alanın saniyelik hasarı
   burnDur: number; // yanan alanın süresi (sn)
-}
-
-function turretDesc(s: TurretSpec): string {
-  switch (s.kind) {
-    case 'shot':
-      return 'Seri atış, tek hedef';
-    case 'lob':
-      return `Bomba: alan hasarı${s.slow ? ', yavaşlatır' : ''}`;
-    case 'pierce':
-      return `Delici ok: hattaki ${s.pierce} düşmanı geçer`;
-    case 'beam':
-      return `Lazer: anında, hattaki ${s.pierce} düşmanı deler`;
-    case 'chain':
-      return `Zincir şimşek: ${(s.chain ?? 0) + 1} hedefe sıçrar`;
-    case 'fire':
-      return `Ateş: düştüğü yeri ${s.burn?.dur} sn yakar`;
-    case 'frost':
-      return `Buz: hedefi ${s.slow} sn yavaşlatır`;
-  }
 }
 
 const round5 = (n: number) => Math.max(5, Math.round(n / 5) * 5);
@@ -372,7 +325,6 @@ export const TIERS: TierDef[] = TIER_INFO.map((info, t) => {
     const cost = round5(b.cost * cst);
     units[arch] = {
       ...b,
-      name: info.units[arch],
       arch,
       tier: t,
       cost,
@@ -388,23 +340,19 @@ export const TIERS: TierDef[] = TIER_INFO.map((info, t) => {
   return {
     index: t,
     key: info.key,
-    name: info.name,
     xpToReach: info.xpToReach,
     baseHp: Math.round(1500 * Math.pow(2.0, t)),
     income: Math.round(2.5 * cst * 10) / 10,
     palette: info.palette,
     units,
-    special: { name: info.special, damage: Math.round(70 * pow) },
+    special: { damage: Math.round(70 * pow) },
     turrets: TURRET_GRADES.map((g, grade) => {
       const s = info.turrets[grade];
       const base = 12 * pow * g.dmgMult;
       return {
-        name: s.name,
         tier: t,
         grade,
-        label: g.label,
         kind: s.kind,
-        desc: turretDesc(s),
         cost: round5(140 * cst * g.costMult),
         dmg: Math.round(base * (s.dmgK ?? 1) * 10) / 10,
         range: g.range,
@@ -517,32 +465,31 @@ export const BASE_MODS: Mods = {
 /** Toplanarak birleşen alanlar (diğerleri çarpılır). */
 const ADDITIVE: (keyof Mods)[] = ['turretBounce', 'specialEcho', 'outpostRegen'];
 
-export type CardCat = 'ordu' | 'ekonomi' | 'savunma' | 'güç';
+export type CardCat = 'army' | 'economy' | 'defense' | 'power';
+/** Kartın adı ve açıklaması shared/i18n'de: card.<id>, card.<id>.desc. */
 export interface CardDef {
   id: string;
-  name: string;
-  desc: string;
   icon: string;
   cat: CardCat;
   mods: Partial<Mods>;
 }
 
 export const CARDS: CardDef[] = [
-  { id: 'foundry', name: 'Döküm Ustalığı', icon: '⚒️', cat: 'ordu', desc: 'Ağır golemler %25 ucuz.', mods: { heavyCost: 0.75 } },
-  { id: 'alloy', name: 'Hafif Alaşım', icon: '🪶', cat: 'ordu', desc: 'Birimler %15 hızlı yürür, %20 hızlı üretilir.', mods: { speed: 1.15, train: 0.8 } },
-  { id: 'vital', name: 'Diri Çekirdek', icon: '💚', cat: 'ordu', desc: 'Tüm birimlerin canı +%15.', mods: { unitHp: 1.15 } },
-  { id: 'warcry', name: 'Savaş Narası', icon: '📯', cat: 'ordu', desc: 'Tüm birimler +%12 hasar verir.', mods: { unitDmg: 1.12 } },
-  { id: 'marksman', name: 'Keskin Nişan', icon: '🎯', cat: 'ordu', desc: 'Menzilliler +%25 hasar, +%15 menzil.', mods: { rangedDmg: 1.25, rangedRange: 1.15 } },
-  { id: 'loot', name: 'Ganimet Simyası', icon: '💰', cat: 'ekonomi', desc: 'Öldürmelerden %35 fazla altın.', mods: { bounty: 1.35 } },
-  { id: 'vein', name: 'Altın Damarı', icon: '⛏️', cat: 'ekonomi', desc: 'Pasif gelir +%35.', mods: { income: 1.35 } },
-  { id: 'wisdom', name: 'Bilgelik Taşı', icon: '📜', cat: 'ekonomi', desc: 'Tüm XP kazancı +%35: sonraki çağa daha erken geçersin.', mods: { xp: 1.35 } },
-  { id: 'ricochet', name: 'Seken Atış', icon: '🔁', cat: 'savunma', desc: 'Kule ve karakol atışları yakındaki bir düşmana daha seker (%50).', mods: { turretBounce: 0.5 } },
-  { id: 'lens', name: 'Gözcü Merceği', icon: '🔭', cat: 'savunma', desc: 'Kule ve karakol menzili +%20, hasarı +%15.', mods: { turretRange: 1.2, turretDmg: 1.15 } },
-  { id: 'masonry', name: 'Taş Örgü', icon: '🧱', cat: 'savunma', desc: 'Karakolların canı +%40; savaşmazken kendini onarır.', mods: { outpostHp: 1.4, outpostRegen: 0.03 } },
-  { id: 'rampart', name: 'Sur Tahkimi', icon: '🏰', cat: 'savunma', desc: 'Kale canı +%30.', mods: { castleHp: 1.3 } },
-  { id: 'echo', name: 'Çifte Yağmur', icon: '☄️', cat: 'güç', desc: 'Özel güç 1 sn sonra aynı yere ikinci kez vurur (%60).', mods: { specialEcho: 0.6 } },
-  { id: 'distill', name: 'Hızlı Damıtma', icon: '⚗️', cat: 'güç', desc: 'Özel güç %40 daha sık hazır olur.', mods: { specialCd: 0.6 } },
-  { id: 'banner', name: 'Sancaktar', icon: '🚩', cat: 'güç', desc: 'Komutan +%30 can ve hasar; yeteneği %30 daha sık.', mods: { cmdPower: 1.3, cmdCd: 0.7 } },
+  { id: 'foundry', icon: '⚒️', cat: 'army', mods: { heavyCost: 0.75 } },
+  { id: 'alloy', icon: '🪶', cat: 'army', mods: { speed: 1.15, train: 0.8 } },
+  { id: 'vital', icon: '💚', cat: 'army', mods: { unitHp: 1.15 } },
+  { id: 'warcry', icon: '📯', cat: 'army', mods: { unitDmg: 1.12 } },
+  { id: 'marksman', icon: '🎯', cat: 'army', mods: { rangedDmg: 1.25, rangedRange: 1.15 } },
+  { id: 'loot', icon: '💰', cat: 'economy', mods: { bounty: 1.35 } },
+  { id: 'vein', icon: '⛏️', cat: 'economy', mods: { income: 1.35 } },
+  { id: 'wisdom', icon: '📜', cat: 'economy', mods: { xp: 1.35 } },
+  { id: 'ricochet', icon: '🔁', cat: 'defense', mods: { turretBounce: 0.5 } },
+  { id: 'lens', icon: '🔭', cat: 'defense', mods: { turretRange: 1.2, turretDmg: 1.15 } },
+  { id: 'masonry', icon: '🧱', cat: 'defense', mods: { outpostHp: 1.4, outpostRegen: 0.03 } },
+  { id: 'rampart', icon: '🏰', cat: 'defense', mods: { castleHp: 1.3 } },
+  { id: 'echo', icon: '☄️', cat: 'power', mods: { specialEcho: 0.6 } },
+  { id: 'distill', icon: '⚗️', cat: 'power', mods: { specialCd: 0.6 } },
+  { id: 'banner', icon: '🚩', cat: 'power', mods: { cmdPower: 1.3, cmdCd: 0.7 } },
 ];
 export const CARD_OFFER = 3;
 const CARD_BY_ID = new Map(CARDS.map((c) => [c.id, c]));
@@ -582,10 +529,11 @@ export const SOURCE_RADIUS = 90;
 export const SOURCE_TIME = 6; // tek başına bu kadar tutmak gerekir
 export const SOURCE_DECAY = 0.12; // kimse yokken ilerleme saniyede bu kadar söner
 export type SourceKind = 'gold' | 'fury' | 'heal';
-export const SOURCE_KINDS: Record<SourceKind, { name: string; desc: string; icon: string }> = {
-  gold: { name: 'Altın Pınarı', icon: '💰', desc: '45 saniyelik gelir kadar altın' },
-  fury: { name: 'Eter Öfkesi', icon: '🔥', desc: '25 sn boyunca tüm birimlerin +%30 hasar, +%20 hız' },
-  heal: { name: 'Yaşam Pınarı', icon: '💚', desc: 'Tüm birimler tam can; kale ve karakollar onarılır' },
+/** Ödüllerin adı ve açıklaması shared/i18n'de: source.<tür>, source.<tür>.desc. */
+export const SOURCE_KINDS: Record<SourceKind, { icon: string }> = {
+  gold: { icon: '💰' },
+  fury: { icon: '🔥' },
+  heal: { icon: '💚' },
 };
 export const SOURCE_KIND_LIST: SourceKind[] = ['gold', 'fury', 'heal'];
 export const SOURCE_GOLD_S = 45;
@@ -602,7 +550,6 @@ export const CMD_SPAWN_DELAY = 3; // maç başında doğması (sn)
 export const CMD_RESPAWN = 30; // ölünce geri dönme süresi (sn)
 export const CMD_START_CD = 12; // yeteneğin ilk hazır olması (sn)
 export const CMD_SKILL_CD = 28;
-export const CMD_SKILL_NAME = 'Sarsıcı Darbe';
 export const CMD_LEAP = 150; // ileri atılma mesafesi
 export const CMD_REACH = 280; // önündeki düşman bu mesafedeyse yetenek kullanılabilir
 export const CMD_SLAM_R = 85; // darbe yarıçapı
@@ -612,7 +559,6 @@ export const CMD_LAND = 0.3; // atılıştan yere iniş süresi (sn)
 /** Seviye eşikleri: komutanın öldürdüğü düşman sayısı (Sv1..Sv5). */
 export const CMD_LEVELS = [0, 3, 8, 15, 25];
 export const CMD_LEVEL_BONUS = 0.12; // seviye başına can + hasar
-export const CMD_NAMES = ['Kütük Komutan', 'Bronz Komutan', 'Demir Komutan', 'Kristal Komutan', 'Eter Komutanı'];
 
 export function cmdLevelOf(kills: number): number {
   let lvl = 1;
@@ -628,7 +574,6 @@ export function commanderDef(tier: number, lvl: number, power = 1): UnitDef {
   const value = hv.cost * 1.5;
   return {
     ...m,
-    name: CMD_NAMES[tier],
     hp: Math.round(hv.hp * 1.3 * k),
     dmg: Math.round(hv.dmg * 0.9 * k * 10) / 10,
     atkCd: 1.0,

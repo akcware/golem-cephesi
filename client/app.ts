@@ -9,6 +9,7 @@ import { music } from './music';
 import { Menu } from './ui/menu';
 import { Hud } from './ui/hud';
 import { toast } from './ui/dom';
+import { t } from '../shared/i18n';
 
 const CONSENTED = 4000;
 
@@ -16,10 +17,10 @@ function errorText(e: unknown): string {
   const msg = String((e as { message?: string })?.message ?? e ?? '');
   const code = (e as { code?: number })?.code;
   if (/not found|locked|full|invalid/i.test(msg) || code === 4212 || code === 520 || code === 4211) {
-    return 'Oda bulunamadı ya da dolu. Kodu kontrol et.';
+    return t('net.notFound');
   }
-  if (/fetch|network|ECONNREFUSED|Failed/i.test(msg)) return 'Sunucuya bağlanılamadı. Sunucu çalışıyor mu?';
-  return msg ? `Bağlanılamadı: ${msg}` : 'Bağlanılamadı.';
+  if (/fetch|network|ECONNREFUSED|Failed/i.test(msg)) return t('net.noServer');
+  return msg ? t('net.failedWith', { msg }) : t('net.failed');
 }
 
 export class App {
@@ -45,9 +46,9 @@ export class App {
       void this.join(() => net.bot(this.menu.name, 'easy'));
     });
 
-    // Davet linki: ?oda=ABCD
+    // Davet linki: ?room=ABCD (eski linkler ?oda=ABCD)
     const params = new URLSearchParams(location.search);
-    const code = params.get('oda');
+    const code = params.get('room') ?? params.get('oda');
     if (code) {
       history.replaceState(null, '', location.pathname);
       this.menu.setCode(code);
@@ -108,6 +109,6 @@ export class App {
     music.menu();
     this.menu.show();
     this.menu.refresh();
-    if (code !== undefined && code !== CONSENTED && code !== 1000) toast('Sunucu bağlantısı koptu.', 'error');
+    if (code !== undefined && code !== CONSENTED && code !== 1000) toast(t('net.lost'), 'error');
   }
 }

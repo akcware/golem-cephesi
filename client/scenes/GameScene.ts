@@ -24,6 +24,7 @@ import {
   keys,
   type Team,
 } from '../textures';
+import { playerName, sourceName, t } from '../../shared/i18n';
 import { sfx } from '../sfx';
 import { music } from '../music';
 
@@ -248,19 +249,19 @@ export class GameScene extends Phaser.Scene {
       if (fx.k === 'destroyed') {
         this.explosion(x, GROUND_Y - 20, 2, 70);
         this.chunks[0].explode(16, x, GROUND_Y - 40);
-        this.floatText(x, GROUND_Y - 130, mine ? 'Karakol yıkıldı!' : 'Karakol yıkıldı', mine ? '#ff9a9a' : '#ffd34d');
+        this.floatText(x, GROUND_Y - 130, t(mine ? 'float.outpostLost' : 'float.outpostKill'), mine ? '#ff9a9a' : '#ffd34d');
       } else if (fx.k === 'built') {
         this.smoke.explode(6, x, GROUND_Y - 10);
         this.spark.explode(10, x, GROUND_Y - 60);
       } else if (fx.k === 'captured') {
         this.spark.explode(8, x - 20, GROUND_Y - 80);
-        this.floatText(x, GROUND_Y - 120, mine ? 'Nokta alındı!' : 'Nokta kaybedildi', mine ? '#9fd0ff' : '#ff9a9a');
+        this.floatText(x, GROUND_Y - 120, t(mine ? 'float.pointTaken' : 'float.pointLost'), mine ? '#9fd0ff' : '#ff9a9a');
       }
     } else if (fx.t === 'heal') {
       // Fidan: ölen Meşe Golem çevresini iyileştirir
       const x = this.sx(fx.x);
       for (let i = 0; i < 14; i++) this.healFx.explode(1, x + (Math.random() * 2 - 1) * fx.r, GROUND_Y - 10 - Math.random() * 30);
-      this.floatText(x, GROUND_Y - 70, 'İyileştirme', '#8dff9a');
+      this.floatText(x, GROUND_Y - 70, t('float.heal'), '#8dff9a');
     } else if (fx.t === 'cmd') {
       this.cmdFx(fx);
     } else if (fx.t === 'src') {
@@ -272,7 +273,7 @@ export class GameScene extends Phaser.Scene {
       if (fx.k === 'taken') {
         const info = B.SOURCE_KINDS[fx.kind as B.SourceKind];
         const mine = fx.side === this.mySide;
-        this.floatText(x, GROUND_Y - 150, `${info?.icon ?? ''} ${info?.name ?? ''}`, mine ? '#9fffb0' : '#ff9a9a');
+        this.floatText(x, GROUND_Y - 150, `${info?.icon ?? ''} ${info ? sourceName(fx.kind) : ''}`, mine ? '#9fffb0' : '#ff9a9a');
         if (mine && fx.kind === 'heal') {
           for (let i = 0; i < 30; i++) this.healFx.explode(1, Phaser.Math.Between(-100, B.WORLD_W + 100), GROUND_Y - 10 - Math.random() * 40);
         }
@@ -293,12 +294,12 @@ export class GameScene extends Phaser.Scene {
       const y = v.c.y - v.height * 0.6;
       if (fx.k === 'block') {
         this.spark.explode(4, x + v.dir * 14, y);
-        if (Math.random() < 0.5) this.floatText(x, v.c.y - v.height - 16, 'Blok!', '#a8d8ff');
+        if (Math.random() < 0.5) this.floatText(x, v.c.y - v.height - 16, t('float.block'), '#a8d8ff');
       } else if (fx.k === 'revive') {
         this.glows[4].explode(24, x, y);
         const ring = this.add.image(x, y, 'ring').setTint(0xc9a8ff).setBlendMode(Phaser.BlendModes.ADD).setDepth(970).setScale(0.2);
         this.tweens.add({ targets: ring, scale: 2.2, alpha: 0, duration: 500, onComplete: () => ring.destroy() });
-        this.floatText(x, v.c.y - v.height - 16, 'Diriliş!', '#d9c2ff');
+        this.floatText(x, v.c.y - v.height - 16, t('float.revive'), '#d9c2ff');
         if (this.onScreen(x)) sfx.evolve();
       } else if (fx.k === 'charge') {
         this.smoke.explode(4, x, v.c.y - 6);
@@ -319,7 +320,7 @@ export class GameScene extends Phaser.Scene {
     const y = GROUND_Y - 40;
     if (fx.k === 'spawn') {
       this.glows[v?.tier ?? 0].explode(18, x, y);
-      if (mine) this.floatText(x, GROUND_Y - 110, 'Komutan sahada!', '#ffe08a');
+      if (mine) this.floatText(x, GROUND_Y - 110, t('float.cmdArrives'), '#ffe08a');
     } else if (fx.k === 'leap') {
       // zıplama: konum sunucudan gelir, burada sadece yükselip inme
       if (v) {
@@ -335,7 +336,7 @@ export class GameScene extends Phaser.Scene {
       this.chunks[v?.tier ?? 0].explode(14, x, GROUND_Y - 6);
       this.smoke.explode(6, x, GROUND_Y - 6);
       this.spark.explode(12, x, GROUND_Y - 20);
-      this.floatText(x, GROUND_Y - 120, B.CMD_SKILL_NAME + '!', mine ? '#ffe08a' : '#ff9a9a');
+      this.floatText(x, GROUND_Y - 120, t('cmd.skill') + '!', mine ? '#ffe08a' : '#ff9a9a');
       if (this.onScreen(x)) {
         sfx.boom();
         music.duck();
@@ -346,10 +347,10 @@ export class GameScene extends Phaser.Scene {
       this.glows[v?.tier ?? 0].explode(24, x, y);
       const ring = this.add.image(x, y, 'ring').setTint(0xffe08a).setBlendMode(Phaser.BlendModes.ADD).setDepth(970).setScale(0.2);
       this.tweens.add({ targets: ring, scale: 2.4, alpha: 0, duration: 500, onComplete: () => ring.destroy() });
-      this.floatText(x, GROUND_Y - 120, `Seviye ${fx.lvl}!`, mine ? '#ffe08a' : '#ffb0b0');
+      this.floatText(x, GROUND_Y - 120, t('float.level', { n: fx.lvl ?? 1 }), mine ? '#ffe08a' : '#ffb0b0');
       if (mine) sfx.evolve();
     } else if (fx.k === 'die') {
-      this.floatText(x, GROUND_Y - 110, mine ? 'Komutanın düştü!' : 'Rakip komutan düştü!', mine ? '#ff9a9a' : '#ffe08a');
+      this.floatText(x, GROUND_Y - 110, t(mine ? 'float.cmdDownMine' : 'float.cmdDownFoe'), mine ? '#ff9a9a' : '#ffe08a');
     }
   }
 
@@ -806,7 +807,8 @@ export class GameScene extends Phaser.Scene {
       if (this.lastBaseHp[ci] >= 0 && p.baseHp < this.lastBaseHp[ci] - 0.01) this.baseHitFx(ci, p.tier);
       this.lastBaseHp[ci] = p.baseHp;
       this.castleDamage(ci, p.baseMaxHp > 0 ? p.baseHp / p.baseMaxHp : 1, st.phase === 'playing' || st.phase === 'ended');
-      if (this.nameTexts[ci].text !== p.name) this.nameTexts[ci].setText(p.name);
+      const name = playerName(p);
+      if (this.nameTexts[ci].text !== name) this.nameTexts[ci].setText(name);
       if (ci === 0) this.rally.setVisible(p.stance === 'hold' && st.phase !== 'ended');
 
       for (let s = 0; s < B.MAX_SLOTS; s++) {
@@ -997,7 +999,7 @@ export class GameScene extends Phaser.Scene {
       if (v.lvlText) {
         if (u.lvl !== v.lvl) {
           v.lvl = u.lvl;
-          v.lvlText.setText(`Sv${u.lvl}`);
+          v.lvlText.setText(t('cmd.lvl', { n: u.lvl }));
         }
         // yazı ayna dönmesin
         v.lvlText.scaleX = Math.sign(face) / v.scale;
