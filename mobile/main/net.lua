@@ -16,7 +16,7 @@ local client
 --- Sunucu adresi: tarayıcıda localhost'tan açıldıysa yerel geliştirme sunucusu,
 --- web sürümü oyun sunucusunun kendisinden açıldıysa aynı adres, aksi halde yayındaki sunucu.
 function M.endpoint()
-	local prod = sys.get_config_string("golem.server", "wss://golem-forge.onrender.com")
+	local prod = sys.get_config_string("golem.server", "wss://golem-cephesi.onrender.com")
 	local dev = sys.get_config_string("golem.dev_server", "ws://localhost:2567")
 	if html5 then
 		local host = html5.run("location.hostname")

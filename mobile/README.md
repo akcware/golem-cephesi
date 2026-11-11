@@ -55,6 +55,17 @@ Web (HTML5) çıktısı `mobile/bundle/web/` altına yazılır. Android paketi:
 APK `mobile/bundle/android/` altına yazılır; USB ile telefona kurulabilir (geliştirici modunda "Bilinmeyen kaynaklar").
 WebSocket eklentisi yerel kod içerdiği için derleme Defold'un bulut derleme sunucusunu (build.defold.com) kullanır.
 
+iOS (App Store / TestFlight) paketi:
+
+```bash
+./build-ios.sh          # App Store imzalı IPA: bundle/ios/export/
+./build-ios.sh upload   # App Store Connect'e yükler (TestFlight'ta işlenir)
+```
+
+Xcode'da ekibin Apple hesabı (Ayarlar → Hesaplar) ya da `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_KEY_PATH` ile bir
+App Store Connect API anahtarı gerekir; dağıtım sertifikası ve profili Xcode otomatik yönetir. Derleme numarası git commit
+sayısıdır, bu yüzden her yeni yükleme öncesinde en az bir commit olmalı.
+
 ## Yeni oyuncu rehberi
 
 Web sürümüyle aynı: ilk açılışta menüde **Eğitimle Başla** öne çıkar (15 adımlı rehberli maç; adımlar
@@ -84,4 +95,4 @@ görülen ipuçları ve eğitimin bittiği cihazda saklanır.
 ## Bilinen eksikler (prototip)
 
 - Gerçek telefonda henüz denenmedi (tarayıcıda Defold'un web çıktısıyla denendi).
-- iOS paketi Mac (ya da bulutta macOS) ve Apple geliştirici hesabı ister.
+- iOS paketi Mac ve Apple geliştirici hesabı ister (bkz. `build-ios.sh`).
