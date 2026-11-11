@@ -64,6 +64,20 @@ node store-assets/asc/publish.mjs        # hepsi; ya da adım adım: meta rating
 dosyasında durur. Gizlilik etiketi ("Data Not Collected") API'de olmadığı için App Store Connect web'den girildi.
 Bağımsız ASO incelemesi ve gerekçeler: `aso/review.md`.
 
+## Google Play'e yükleme (API)
+
+`play/publish.mjs` Google Play Developer API ile: 6 dilde (es için es-ES ve es-419) başlık, kısa ve tam açıklama
+(`aso/metadata-*.md` → "Google Play" bölümü), ikon, öne çıkan görsel, telefon ve 7"/10" tablet görselleri, iletişim
+bilgisi ve AAB → `TRACK` kanalı (varsayılan `internal`, taslak). Servis hesabı anahtarı: `~/.golemforge/play-service-account.json`.
+
+```bash
+(cd mobile && ./build-android.sh release)
+node store-assets/play/publish.mjs                       # hepsi; ya da: listing images bundle
+TRACK=production STATUS=draft node store-assets/play/publish.mjs bundle
+```
+
+İçerik derecelendirmesi, veri güvenliği, hedef kitle gibi "Uygulama içeriği" formları API'de yok; Play Console'dan doldurulur.
+
 ## Yeniden üretme
 
 Başlıkları değiştirmek için `aso/captions.json`'ı düzenle, sonra:

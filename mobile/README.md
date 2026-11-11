@@ -53,6 +53,9 @@ Web (HTML5) çıktısı `mobile/bundle/web/` altına yazılır. Android paketi:
 ```
 
 APK `mobile/bundle/android/` altına yazılır; USB ile telefona kurulabilir (geliştirici modunda "Bilinmeyen kaynaklar").
+Google Play için `./build-android.sh release`: yükleme anahtarıyla (`~/.golemforge/upload-keystore.jks`, şifresi macOS
+Anahtar Zinciri'nde) imzalı AAB üretir; sürüm kodu git commit sayısıdır. Mağaza girişi ve yükleme:
+`store-assets/play/publish.mjs` (bkz. `store-assets/README.md`).
 WebSocket eklentisi yerel kod içerdiği için derleme Defold'un bulut derleme sunucusunu (build.defold.com) kullanır.
 
 iOS (App Store / TestFlight) paketi:
