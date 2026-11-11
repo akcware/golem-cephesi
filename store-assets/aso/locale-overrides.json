@@ -1,0 +1,9 @@
+{
+  "_comment": "Aynı metin dosyasını paylaşan mağaza dilleri için yalnızca farklı olan alanlar (publish.mjs okur). ASO incelemesi: aso/review.md",
+  "en-GB": {
+    "keywords": "pvp,td,rts,real,time,lane,battle,multiplayer,online,friend,1v1,turret,base,evolution,defence,age"
+  },
+  "es-MX": {
+    "keywords": "torres,defensa,ejército,batalla,multijugador,amigos,asedio,tiempo,real,tropas,torreta,línea,duelo"
+  }
+}

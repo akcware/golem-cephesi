@@ -5,13 +5,13 @@ Counts are computed by script from the exact strings in this file (Unicode code 
 | Field | Chars | Limit |
 |---|---|---|
 | App Store: App name | 23 | 30 |
-| App Store: Subtitle | 27 | 30 |
-| App Store: Keywords | 99 | 100 |
+| App Store: Subtitle | 29 | 30 |
+| App Store: Keywords | 94 | 100 |
 | App Store: Promotional text | 167 | 170 |
-| App Store: Description | 2614 | 4000 |
+| App Store: Description | 2673 | 4000 |
 | Google Play: Title | 23 | 30 |
 | Google Play: Short description | 77 | 80 |
-| Google Play: Full description | 2633 | 4000 |
+| Google Play: Full description | 2692 | 4000 |
 
 ---
 
@@ -19,11 +19,11 @@ Counts are computed by script from the exact strings in this file (Unicode code 
 
 **App name (≤30):** `Golem Forge: Castle War` (23)
 
-**Subtitle (≤30):** `PvP Army Strategy & Defense` (27)
+**Subtitle (≤30):** `Army Strategy & Tower Defense` (29)
 
-**Keywords (≤100):** (99)
+**Keywords (≤100):** (94)
 ```text
-tower,td,battle,rts,lane,siege,multiplayer,online,friend,1v1,troop,commander,fantasy,duel,evolution
+pvp,td,rts,real,time,lane,battle,multiplayer,online,friend,1v1,turret,base,evolution,age,troop
 ```
 
 **Promotional text (≤170):** (167)
@@ -31,9 +31,9 @@ tower,td,battle,rts,lane,siege,multiplayer,online,friend,1v1,troop,commander,fan
 Forge a golem army, advance from Wood to Aether across 5 ages and pick a card at every age-up. Invite a friend with a room code or face the bot on 3 difficulty levels.
 ```
 
-**Description (≤4000):** (2614)
+**Description (≤4000):** (2673)
 ```text
-Golem Forge is a real-time strategy game of castle war. Two alchemists forge golem armies and send them down the same battle corridor. Your goal: crush the enemy castle in a live 1v1 match.
+Forge golems, send them down the battle lane and smash the enemy castle before yours falls. Golem Forge is real-time 1v1 strategy with a tower-defense twist: train an army, build turrets on your castle, evolve through 5 ages and outplay your rival.
 
 BUILD YOUR ARMY
 Train melee, ranged and heavy golems. They march and fight on their own; you decide when the army attacks and when it falls back to hold. Mind the power triangle: melee beats ranged, ranged beats heavy, heavy beats melee, each for 1.5× damage. Read your rival's army and answer with the right golems.
@@ -85,9 +85,9 @@ Suggested category: Games > Strategy (secondary: Action). Google Play: Strategy;
 Build a golem army and crush the enemy castle. Real-time online strategy PvP.
 ```
 
-**Full description (≤4000):** (2633)
+**Full description (≤4000):** (2692)
 ```text
-Golem Forge is a real-time strategy game of castle war. Two alchemists forge golem armies and send them down the same battle corridor. Your goal: crush the enemy castle in a live 1v1 match.
+Forge golems, send them down the battle lane and smash the enemy castle before yours falls. Golem Forge is real-time 1v1 strategy with a tower-defense twist: train an army, build turrets on your castle, evolve through 5 ages and outplay your rival.
 
 ⚔️ BUILD YOUR ARMY
 Train melee, ranged and heavy golems. They march and fight on their own; you decide when the army attacks and when it falls back to hold. Mind the power triangle: melee beats ranged, ranged beats heavy, heavy beats melee, each for 1.5× damage. Read your rival's army and answer with the right golems.

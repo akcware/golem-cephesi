@@ -8,10 +8,10 @@ Counts are computed by script from the exact strings in this file (Unicode code 
 | App Store: Subtitle | 30 | 30 |
 | App Store: Keywords | 98 | 100 |
 | App Store: Promotional text | 144 | 170 |
-| App Store: Description | 2455 | 4000 |
+| App Store: Description | 2487 | 4000 |
 | Google Play: Title | 24 | 30 |
 | Google Play: Short description | 74 | 80 |
-| Google Play: Full description | 2474 | 4000 |
+| Google Play: Full description | 2506 | 4000 |
 
 ---
 
@@ -19,11 +19,11 @@ Counts are computed by script from the exact strings in this file (Unicode code 
 
 **App name (≤30):** `Golem Forge: Kale Savaşı` (24)
 
-**Subtitle (≤30):** `Gerçek Zamanlı Online Strateji` (30)
+**Subtitle (≤30):** `Online Strateji & Kule Savunma` (30)
 
 **Keywords (≤100):** (98)
 ```text
-savaş,pvp,ordu,kule,savunma,taktik,kuşatma,arkadaş,kişilik,çok,oyunculu,rts,asker,kart,çağ,komutan
+savaş,pvp,ordu,kuşatma,arkadaş,arkadaşla,iki,2,kişilik,çok,oyunculu,çağ,fetih,krallık,düello,asker
 ```
 
 **Promotional text (≤170):** (144)
@@ -31,9 +31,9 @@ savaş,pvp,ordu,kule,savunma,taktik,kuşatma,arkadaş,kişilik,çok,oyunculu,rts
 Golem ordunu sür, Ahşap'tan Eter'e 5 çağ atla, her çağda bir kart seç. Arkadaşını oda koduyla çağır ya da Kolay, Normal, Zor botlara karşı oyna!
 ```
 
-**Description (≤4000):** (2455)
+**Description (≤4000):** (2487)
 ```text
-Golem Forge, online oynanan gerçek zamanlı bir strateji ve kale savaşı oyunu. İki simyacı golem ordularını döküp aynı koridora sürer. Amaç basit: rakip kaleyi 1'e 1 maçta yıkmak.
+Golemlerini dök, cepheye sür, kalen düşmeden rakip kaleyi yık. Golem Forge, kule savunma dokunuşlu, 1'e 1 gerçek zamanlı bir strateji oyunu: ordunu kur, kalene kule dik, 5 çağ boyunca güçlen ve rakibini alt et.
 
 ORDUNU KUR, CEPHEYE SÜR
 Yakın dövüş, menzilli ve ağır golem üret. Golemler kendiliğinden yürür ve savaşır; sen ordunu topluca hücuma kaldırır ya da kale önünde savunmaya çekersin. Güç üçgenini unutma: yakın dövüş menzilliyi, menzilli ağırı, ağır da yakın dövüşü 1,5 kat hasarla yener. Rakibin ordusuna bak, doğru golemle karşılık ver.
@@ -85,9 +85,9 @@ Suggested category: Oyunlar > Strateji (ikincil: Aksiyon). Google Play: Strateji
 Golem ordunu sür, rakip kaleyi yık! Gerçek zamanlı online strateji savaşı.
 ```
 
-**Full description (≤4000):** (2474)
+**Full description (≤4000):** (2506)
 ```text
-Golem Forge, online oynanan gerçek zamanlı bir strateji ve kale savaşı oyunu. İki simyacı golem ordularını döküp aynı koridora sürer. Amaç basit: rakip kaleyi 1'e 1 maçta yıkmak.
+Golemlerini dök, cepheye sür, kalen düşmeden rakip kaleyi yık. Golem Forge, kule savunma dokunuşlu, 1'e 1 gerçek zamanlı bir strateji oyunu: ordunu kur, kalene kule dik, 5 çağ boyunca güçlen ve rakibini alt et.
 
 ⚔️ ORDUNU KUR, CEPHEYE SÜR
 Yakın dövüş, menzilli ve ağır golem üret. Golemler kendiliğinden yürür ve savaşır; sen ordunu topluca hücuma kaldırır ya da kale önünde savunmaya çekersin. Güç üçgenini unutma: yakın dövüş menzilliyi, menzilli ağırı, ağır da yakın dövüşü 1,5 kat hasarla yener. Rakibin ordusuna bak, doğru golemle karşılık ver.

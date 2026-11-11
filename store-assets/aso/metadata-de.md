@@ -8,10 +8,10 @@ Counts are computed by script from the exact strings in this file (Unicode code 
 | App Store: Subtitle | 25 | 30 |
 | App Store: Keywords | 100 | 100 |
 | App Store: Promotional text | 166 | 170 |
-| App Store: Description | 2975 | 4000 |
+| App Store: Description | 3031 | 4000 |
 | Google Play: Title | 29 | 30 |
 | Google Play: Short description | 77 | 80 |
-| Google Play: Full description | 2994 | 4000 |
+| Google Play: Full description | 3050 | 4000 |
 
 ---
 
@@ -23,7 +23,7 @@ Counts are computed by script from the exact strings in this file (Unicode code 
 
 **Keywords (≤100):** (100)
 ```text
-tower,defense,turm,verteidigung,schlacht,armee,online,mehrspieler,freunde,belagerung,taktik,burg,rts
+turmverteidigung,strategiespiel,verteidigung,turm,burg,schlacht,armee,mehrspieler,belagerung,freunde
 ```
 
 **Promotional text (≤170):** (166)
@@ -31,9 +31,9 @@ tower,defense,turm,verteidigung,schlacht,armee,online,mehrspieler,freunde,belage
 Gieß eine Golem-Armee, steig in 5 Ären von Holz bis Äther auf und wähl bei jedem Aufstieg eine Karte. Fordere Freunde per Raumcode heraus oder tritt gegen den Bot an.
 ```
 
-**Description (≤4000):** (2975)
+**Description (≤4000):** (3031)
 ```text
-Golem Forge ist ein Echtzeit-Strategiespiel um Burgen und Armeen. Zwei Alchemisten gießen Golem-Armeen und schicken sie durch denselben Korridor in die Schlacht. Dein Ziel: die gegnerische Burg im Duell 1 gegen 1 zerschmettern.
+Gieß Golems, schick sie durch den Korridor und zerschmettere die feindliche Burg, bevor deine fällt. Golem Forge ist Echtzeit-Strategie im Duell 1 gegen 1 mit Tower-Defense-Elementen: Stell eine Armee auf, bau Türme an deiner Burg, steig durch 5 Ären auf und überliste deinen Gegner.
 
 STELL DEINE ARMEE AUF
 Gieß Nahkampf-, Fernkampf- und schwere Golems. Sie marschieren und kämpfen von selbst; du entscheidest, wann deine Armee angreift und wann sie sich zum Halten vor der Burg sammelt. Denk an das Kräftedreieck: Nahkampf schlägt Fernkampf, Fernkampf schlägt Schwer, Schwer schlägt Nahkampf, jeweils mit 1,5-fachem Schaden. Lies die Armee deines Gegners und kontere mit den richtigen Golems.
@@ -85,9 +85,9 @@ Suggested category: Spiele > Strategie (secondary: Action). Google Play: Strateg
 Gieß deine Golem-Armee und zerschmettere die Burg. Echtzeit-Strategie online.
 ```
 
-**Full description (≤4000):** (2994)
+**Full description (≤4000):** (3050)
 ```text
-Golem Forge ist ein Echtzeit-Strategiespiel um Burgen und Armeen. Zwei Alchemisten gießen Golem-Armeen und schicken sie durch denselben Korridor in die Schlacht. Dein Ziel: die gegnerische Burg im Duell 1 gegen 1 zerschmettern.
+Gieß Golems, schick sie durch den Korridor und zerschmettere die feindliche Burg, bevor deine fällt. Golem Forge ist Echtzeit-Strategie im Duell 1 gegen 1 mit Tower-Defense-Elementen: Stell eine Armee auf, bau Türme an deiner Burg, steig durch 5 Ären auf und überliste deinen Gegner.
 
 ⚔️ STELL DEINE ARMEE AUF
 Gieß Nahkampf-, Fernkampf- und schwere Golems. Sie marschieren und kämpfen von selbst; du entscheidest, wann deine Armee angreift und wann sie sich zum Halten vor der Burg sammelt. Denk an das Kräftedreieck: Nahkampf schlägt Fernkampf, Fernkampf schlägt Schwer, Schwer schlägt Nahkampf, jeweils mit 1,5-fachem Schaden. Lies die Armee deines Gegners und kontere mit den richtigen Golems.

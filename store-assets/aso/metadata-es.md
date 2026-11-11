@@ -6,12 +6,12 @@ Counts are computed by script from the exact strings in this file (Unicode code 
 |---|---|---|
 | App Store: App name | 27 | 30 |
 | App Store: Subtitle | 26 | 30 |
-| App Store: Keywords | 98 | 100 |
+| App Store: Keywords | 95 | 100 |
 | App Store: Promotional text | 154 | 170 |
-| App Store: Description | 2922 | 4000 |
+| App Store: Description | 2974 | 4000 |
 | Google Play: Title | 27 | 30 |
 | Google Play: Short description | 77 | 80 |
-| Google Play: Full description | 2941 | 4000 |
+| Google Play: Full description | 2993 | 4000 |
 
 ---
 
@@ -21,9 +21,9 @@ Counts are computed by script from the exact strings in this file (Unicode code 
 
 **Subtitle (≤30):** `Guerra de castillos online` (26)
 
-**Keywords (≤100):** (98)
+**Keywords (≤100):** (95)
 ```text
-torres,defensa,ejército,batalla,multijugador,amigos,asedio,tiempo,real,rts,tropas,comandante,duelo
+torres,defensa,ejército,batalla,multijugador,amigos,asedio,tiempo,real,tropas,torreta,fortaleza
 ```
 
 **Promotional text (≤170):** (154)
@@ -31,9 +31,9 @@ torres,defensa,ejército,batalla,multijugador,amigos,asedio,tiempo,real,rts,trop
 Forja un ejército de gólems, avanza de Madera a Éter en 5 eras y elige una carta en cada una. Reta a un amigo con un código de sala o juega contra el bot.
 ```
 
-**Description (≤4000):** (2922)
+**Description (≤4000):** (2974)
 ```text
-Golem Forge es un juego de estrategia en tiempo real y guerra de castillos. Dos alquimistas forjan ejércitos de gólems y los lanzan por el mismo corredor. Tu objetivo: aplastar el castillo enemigo en un duelo 1 contra 1.
+Forja gólems, lánzalos por el corredor y aplasta el castillo enemigo antes de que caiga el tuyo. Golem Forge es estrategia en tiempo real 1 contra 1 con un toque de defensa de torres: forma un ejército, construye torretas en tu castillo, avanza 5 eras y supera a tu rival.
 
 FORMA TU EJÉRCITO
 Forja gólems cuerpo a cuerpo, a distancia y pesados. Avanzan y luchan solos; tú decides cuándo ataca tu ejército y cuándo se repliega a defender. Recuerda el triángulo de poder: el cuerpo a cuerpo vence a los de distancia, los de distancia vencen a los pesados y los pesados vencen al cuerpo a cuerpo, siempre con 1,5× de daño. Lee el ejército rival y respóndele con los gólems adecuados.
@@ -85,9 +85,9 @@ Suggested category: Juegos > Estrategia (secondary: Acción). Google Play: Estra
 Forja un ejército de gólems y aplasta el castillo enemigo. Estrategia online.
 ```
 
-**Full description (≤4000):** (2941)
+**Full description (≤4000):** (2993)
 ```text
-Golem Forge es un juego de estrategia en tiempo real y guerra de castillos. Dos alquimistas forjan ejércitos de gólems y los lanzan por el mismo corredor. Tu objetivo: aplastar el castillo enemigo en un duelo 1 contra 1.
+Forja gólems, lánzalos por el corredor y aplasta el castillo enemigo antes de que caiga el tuyo. Golem Forge es estrategia en tiempo real 1 contra 1 con un toque de defensa de torres: forma un ejército, construye torretas en tu castillo, avanza 5 eras y supera a tu rival.
 
 ⚔️ FORMA TU EJÉRCITO
 Forja gólems cuerpo a cuerpo, a distancia y pesados. Avanzan y luchan solos; tú decides cuándo ataca tu ejército y cuándo se repliega a defender. Recuerda el triángulo de poder: el cuerpo a cuerpo vence a los de distancia, los de distancia vencen a los pesados y los pesados vencen al cuerpo a cuerpo, siempre con 1,5× de daño. Lee el ejército rival y respóndele con los gólems adecuados.

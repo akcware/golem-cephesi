@@ -6,12 +6,12 @@ Counts are computed by script from the exact strings in this file (Unicode code 
 |---|---|---|
 | App Store: App name | 27 | 30 |
 | App Store: Subtitle | 27 | 30 |
-| App Store: Keywords | 99 | 100 |
+| App Store: Keywords | 98 | 100 |
 | App Store: Promotional text | 157 | 170 |
-| App Store: Description | 3030 | 4000 |
+| App Store: Description | 3100 | 4000 |
 | Google Play: Title | 27 | 30 |
 | Google Play: Short description | 74 | 80 |
-| Google Play: Full description | 3049 | 4000 |
+| Google Play: Full description | 3119 | 4000 |
 
 ---
 
@@ -21,9 +21,9 @@ Counts are computed by script from the exact strings in this file (Unicode code 
 
 **Subtitle (≤30):** `Guerre de châteaux en ligne` (27)
 
-**Keywords (≤100):** (99)
+**Keywords (≤100):** (98)
 ```text
-tower,défense,tour,armée,bataille,multijoueur,amis,siège,temps,réel,rts,troupes,commandant,duel,1v1
+défense,tour,armée,bataille,multijoueur,amis,siège,temps,réel,troupes,tourelle,duel,1v1,forteresse
 ```
 
 **Promotional text (≤170):** (157)
@@ -31,9 +31,9 @@ tower,défense,tour,armée,bataille,multijoueur,amis,siège,temps,réel,rts,trou
 Forge une armée de golems, traverse 5 âges du Bois à l’Éther et choisis une carte à chaque nouvel âge. Défie un ami avec un code de salon ou affronte le bot.
 ```
 
-**Description (≤4000):** (3030)
+**Description (≤4000):** (3100)
 ```text
-Golem Forge est un jeu de stratégie en temps réel où deux châteaux se font la guerre. Deux alchimistes forgent des armées de golems et les envoient dans le même couloir. Ton objectif : écraser le château ennemi en duel, en 1 contre 1.
+Forge des golems, envoie-les dans le couloir et écrase le château ennemi avant que le tien ne tombe. Golem Forge est un jeu de stratégie en temps réel en 1 contre 1, avec une touche de défense de tour : forme ton armée, construis des tourelles sur ton château, traverse 5 âges et surpasse ton adversaire.
 
 FORME TON ARMÉE
 Produis des golems de mêlée, à distance et lourds. Ils avancent et se battent tout seuls ; à toi de décider quand ton armée attaque et quand elle se replie en garde. Pense au triangle des forces : la mêlée bat la distance, la distance bat le lourd, le lourd bat la mêlée, à chaque fois avec 1,5× plus de dégâts. Observe l’armée adverse et réponds avec les bons golems.
@@ -85,9 +85,9 @@ Suggested category: Jeux > Stratégie (secondary: Action). Google Play: Stratég
 Forge une armée de golems et écrase le château ennemi. Stratégie en ligne.
 ```
 
-**Full description (≤4000):** (3049)
+**Full description (≤4000):** (3119)
 ```text
-Golem Forge est un jeu de stratégie en temps réel où deux châteaux se font la guerre. Deux alchimistes forgent des armées de golems et les envoient dans le même couloir. Ton objectif : écraser le château ennemi en duel, en 1 contre 1.
+Forge des golems, envoie-les dans le couloir et écrase le château ennemi avant que le tien ne tombe. Golem Forge est un jeu de stratégie en temps réel en 1 contre 1, avec une touche de défense de tour : forme ton armée, construis des tourelles sur ton château, traverse 5 âges et surpasse ton adversaire.
 
 ⚔️ FORME TON ARMÉE
 Produis des golems de mêlée, à distance et lourds. Ils avancent et se battent tout seuls ; à toi de décider quand ton armée attaque et quand elle se replie en garde. Pense au triangle des forces : la mêlée bat la distance, la distance bat le lourd, le lourd bat la mêlée, à chaque fois avec 1,5× plus de dégâts. Observe l’armée adverse et réponds avec les bons golems.

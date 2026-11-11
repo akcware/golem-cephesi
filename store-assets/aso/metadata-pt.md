@@ -6,12 +6,12 @@ Counts are computed by script from the exact strings in this file (Unicode code 
 |---|---|---|
 | App Store: App name | 27 | 30 |
 | App Store: Subtitle | 25 | 30 |
-| App Store: Keywords | 97 | 100 |
+| App Store: Keywords | 98 | 100 |
 | App Store: Promotional text | 157 | 170 |
-| App Store: Description | 2873 | 4000 |
+| App Store: Description | 2906 | 4000 |
 | Google Play: Title | 27 | 30 |
 | Google Play: Short description | 75 | 80 |
-| Google Play: Full description | 2892 | 4000 |
+| Google Play: Full description | 2925 | 4000 |
 
 ---
 
@@ -21,9 +21,9 @@ Counts are computed by script from the exact strings in this file (Unicode code 
 
 **Subtitle (≤30):** `Guerra de castelos online` (25)
 
-**Keywords (≤100):** (97)
+**Keywords (≤100):** (98)
 ```text
-torre,defesa,exército,batalha,multiplayer,amigos,cerco,tempo,real,rts,tropas,comandante,duelo,1v1
+torre,defesa,exército,batalha,multiplayer,amigos,cerco,tempo,real,tropas,duelo,fortaleza,conquista
 ```
 
 **Promotional text (≤170):** (157)
@@ -31,9 +31,9 @@ torre,defesa,exército,batalha,multiplayer,amigos,cerco,tempo,real,rts,tropas,co
 Forje um exército de golens, avance da Madeira ao Éter em 5 eras e escolha uma carta a cada era. Desafie um amigo com o código da sala ou jogue contra o bot.
 ```
 
-**Description (≤4000):** (2873)
+**Description (≤4000):** (2906)
 ```text
-Golem Forge é um jogo de estratégia em tempo real e guerra de castelos. Dois alquimistas forjam exércitos de golens e os mandam pelo mesmo corredor de batalha. Seu objetivo: esmagar o castelo inimigo num duelo 1 contra 1.
+Forje golens, mande-os pelo corredor e esmague o castelo inimigo antes que o seu caia. Golem Forge é estratégia em tempo real 1 contra 1 com um toque de defesa de torre: monte um exército, construa torres no seu castelo, avance 5 eras e supere seu rival.
 
 MONTE SEU EXÉRCITO
 Treine golens corpo a corpo, à distância e pesados. Eles marcham e lutam sozinhos; você decide quando o exército ataca e quando recua para a defesa. Lembre do triângulo de poder: corpo a corpo vence à distância, à distância vence pesado e pesado vence corpo a corpo, sempre com 1,5× de dano. Leia o exército rival e responda com os golens certos.
@@ -85,9 +85,9 @@ Suggested category: Jogos > Estratégia (secondary: Ação). Google Play: Estrat
 Forje um exército de golens e esmague o castelo inimigo. Estratégia online.
 ```
 
-**Full description (≤4000):** (2892)
+**Full description (≤4000):** (2925)
 ```text
-Golem Forge é um jogo de estratégia em tempo real e guerra de castelos. Dois alquimistas forjam exércitos de golens e os mandam pelo mesmo corredor de batalha. Seu objetivo: esmagar o castelo inimigo num duelo 1 contra 1.
+Forje golens, mande-os pelo corredor e esmague o castelo inimigo antes que o seu caia. Golem Forge é estratégia em tempo real 1 contra 1 com um toque de defesa de torre: monte um exército, construa torres no seu castelo, avance 5 eras e supere seu rival.
 
 ⚔️ MONTE SEU EXÉRCITO
 Treine golens corpo a corpo, à distância e pesados. Eles marcham e lutam sozinhos; você decide quando o exército ataca e quando recua para a defesa. Lembre do triângulo de poder: corpo a corpo vence à distância, à distância vence pesado e pesado vence corpo a corpo, sempre com 1,5× de dano. Leia o exército rival e responda com os golens certos.

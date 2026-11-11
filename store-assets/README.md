@@ -1,6 +1,6 @@
 # Golem Forge — mağaza görselleri ve metinleri
 
-App Store ve Google Play için ekran görüntüleri, öne çıkan görsel ve mağaza metinleri. 6 dil: **en, tr, de, es, fr, pt**.
+App Store ve Google Play için ekran görüntüleri, öne çıkan görsel ve mağaza metinleri. 6 dil: **en, tr, de, es, fr, pt** (App Store'da 8 mağaza dili: en-US, en-GB, tr, de-DE, es-ES, es-MX, fr-FR, pt-BR).
 
 ## İçerik
 
@@ -48,6 +48,21 @@ Tüm PNG'ler RGB (alfa kanalı yok); App Store Connect alfa kanallı görseli re
 - Oyun, iOS 27.2 simülatörlerinde (iPhone 18 Pro Max, iPad Pro 13" M5) her dilde gerçekten oynandı; oyun içi arayüz o dilde. Simülatör durum çubuğu 9:41'e sabitlendi, ama oyun durum çubuğunu gizlediği (`UIStatusBarHidden`) için karelerde saat görünmüyor.
 - Görüntüler gerçek oyun ekranıdır. Kalabalık savaşlar ve ileri çağlar hızlı görünsün diye maçlar yerel bir "vitrin" sunucusuyla oynandı: aynı oyun kuralları, sadece iki tarafa ek altın/XP ve sahne zamanlaması (çağ atlama, özel güç) sunucudan verildi. Bu sunucu depoya girmedi.
 - Rakip bot olduğu için HUD'da "(bot)" yazar; çevrimiçi slaytı oda kodu ekranını gösterir.
+
+## App Store Connect'e yükleme (API)
+
+`asc/publish.mjs` mağaza kaydını App Store Connect API ile doldurur: 8 mağaza dilinde metinler (`aso/metadata-*.md`,
+en-GB ve es-MX'e özel anahtar kelimeler `aso/locale-overrides.json`), kategori, yaş derecelendirmesi, ücretsiz fiyat
+ve tüm ülkeler, inceleme iletişim bilgisi ve notları, derleme, ekran görüntüleri. **İncelemeye göndermez.**
+
+```bash
+export ASC_KEY_ID=… ASC_ISSUER_ID=…     # anahtar: ~/.appstoreconnect/private_keys/AuthKey_<id>.p8
+node store-assets/asc/publish.mjs        # hepsi; ya da adım adım: meta rating price review build shots status
+```
+
+İnceleme iletişim bilgisi (telefon vb.) depo herkese açık olduğu için git'e girmeyen `asc/contact.local.json`
+dosyasında durur. Gizlilik etiketi ("Data Not Collected") API'de olmadığı için App Store Connect web'den girildi.
+Bağımsız ASO incelemesi ve gerekçeler: `aso/review.md`.
 
 ## Yeniden üretme
 

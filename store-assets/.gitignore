@@ -7,3 +7,6 @@ screenshots/
 source/assets/captures/
 source/assets/art/
 source/data.js
+
+# App Review iletişim bilgisi (telefon vb.), yalnızca yerelde
+asc/contact.local.json
