@@ -270,7 +270,7 @@ local function build_menu(self)
 		if #self.code == 4 then self:join({ mode = "join", code = self.code }) else self:edit("code") end
 	end, { parent = g, modal = "menu", label = I.t("menu.join"), size = 22 })
 	ui.text(cx, cy - 282, I.t("mobile.dragHint"), { size = 13, parent = g, font = "small", color = C.dim, width = 520 })
-	ui.text(VW - 12, 14, I.t("mobile.version"), { size = 12, parent = g, font = "small", color = C.dim, pivot = gui.PIVOT_E })
+	ui.text(VW - 12, 14, "v" .. sys.get_config_string("project.version", ""), { size = 12, parent = g, font = "small", color = C.dim, pivot = gui.PIVOT_E })
 	-- müzik künyesi (menü teması CC-BY 3.0, diğerleri CC0; ayrıntı README'de)
 	ui.text(VW - 12, 32, I.t("music.label") .. ": HitCtrl (CC-BY 3.0) · Emma_MA, cynicmusic, Robin Lamb (CC0) · OpenGameArt", { size = 12, parent = g, font = "small", color = C.dim, pivot = gui.PIVOT_E })
 	self.menu_mute = ui.button("menu_mute", 92, 32, 160, 42, function() self:toggle_mute() end, { parent = g, modal = "menu", label = "", size = 16 })

@@ -381,7 +381,6 @@ export const es: Record<keyof typeof en, string> = {
   'float.cmdDownFoe': '¡Comandante enemigo caído!',
 
   // ── mobile (Defold) client only ──
-  'mobile.version': 'Prototipo móvil v0.1',
   'mobile.dragHint': 'Los gólems avanzan solos. Arrastra la pantalla para moverte por el mapa.',
   'mobile.soundOn': 'Con sonido',
   'mobile.soundOff': 'Sin sonido',

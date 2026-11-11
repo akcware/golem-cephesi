@@ -381,7 +381,6 @@ export const tr: Record<keyof typeof en, string> = {
   'float.cmdDownFoe': 'Rakip komutan düştü!',
 
   // ── yalnızca mobil (Defold) istemci ──
-  'mobile.version': 'Mobil prototip v0.1',
   'mobile.dragHint': 'Golemler kendiliğinden yürür. Ekranı sürükleyerek haritada gezin.',
   'mobile.soundOn': 'Ses açık',
   'mobile.soundOff': 'Ses kapalı',

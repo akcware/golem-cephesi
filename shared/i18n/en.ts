@@ -383,7 +383,6 @@ export const en = {
   'float.cmdDownFoe': 'Enemy commander down!',
 
   // ── mobile (Defold) client only ──
-  'mobile.version': 'Mobile prototype v0.1',
   'mobile.dragHint': 'Golems march on their own. Drag the screen to move around the map.',
   'mobile.soundOn': 'Sound on',
   'mobile.soundOff': 'Sound off',
