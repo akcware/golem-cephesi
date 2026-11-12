@@ -19,8 +19,9 @@ const server = defineServer({
     battle: defineRoom(BattleRoom).filterBy(['mode']),
   },
   express: (app) => {
+    // commit: Render'ın verdiği RENDER_GIT_COMMIT; hangi sürümün yayında olduğunu dışarıdan görmek için
     app.get('/health', (_req, res) => {
-      res.json({ ok: true });
+      res.json({ ok: true, commit: process.env.RENDER_GIT_COMMIT?.slice(0, 7) ?? null });
     });
     if (fs.existsSync(distDir)) {
       app.use(express.static(distDir));
